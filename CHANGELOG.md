@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-09
+
 ### Added
 
 - Tesla vehicles through Teslemetry: battery level, range, charging state and
@@ -29,4 +31,5 @@ the notes of the version's GitHub Release.
 - A _Test the connection_ action, showing the vehicles, energy sites, stream
   status and Teslemetry credit balance.
 
-[Unreleased]: https://github.com/guim31/gladys-tesla/commits/main
+[Unreleased]: https://github.com/guim31/gladys-tesla/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guim31/gladys-tesla/releases/tag/v1.0.1
