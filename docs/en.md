@@ -52,11 +52,12 @@ odometer, display units). It only adds fields, it never removes yours.
 
 ### Settings
 
-| Setting                        | What it does                                                                                                                                                                                                                      |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Units**                      | Units of distances and temperatures **as stored and compared by scenes**: the car's own display setting (default), miles and °F, or kilometers and °C. The dashboard always shows each user's preferred units, whatever you pick. |
-| **Device names language**      | English or French names for the features of new devices. Gladys keeps a feature's name once the device is created.                                                                                                                |
-| **Backup refresh of the cars** | How often an **awake** car that streams nothing is read (15, 30 or 60 minutes, or never). Never while the car sleeps.                                                                                                             |
+| Setting                                               | What it does                                                                                                                                                                                                                      |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Units**                                             | Units of distances and temperatures **as stored and compared by scenes**: the car's own display setting (default), miles and °F, or kilometers and °C. The dashboard always shows each user's preferred units, whatever you pick. |
+| **Device names language**                             | English or French names for the features of new devices. Gladys keeps a feature's name once the device is created.                                                                                                                |
+| **Backup refresh of the cars**                        | How often an **awake** car that streams nothing is read (15, 30 or 60 minutes, or never). Never while the car sleeps.                                                                                                             |
+| **Send the home consumption to the energy dashboard** | Off by default. Adds the home consumption index to Powerwall sites (see below).                                                                                                                                                   |
 
 Changing **Units** on a car you already added: the Discovery tab offers an
 **Update** for it. Until you accept, the car keeps being published in its
@@ -97,15 +98,21 @@ battery features, a Powerwall without panels no solar ones.
 | Battery charging / discharging | W, two features (both positive)                                                         |
 | Powerwall charge               | %                                                                                       |
 | Grid connected                 | Off during an outage (the house runs on the Powerwall)                                  |
-| Operation mode                 | Self-Powered, Time-Based Control or Backup-only, **adjustable**                         |
-| Energy indexes                 | Cumulative kWh: home consumption, solar production, grid import and export, battery     |
+| Operation mode                 | Self-Powered or Time-Based Control, **adjustable**                                      |
+| Energy indexes                 | Cumulative kWh: solar production, grid import and export, battery (home: see below)     |
 
-The **home consumption index** plugs into the Gladys energy dashboard: Gladys
-computes the consumption per half hour and its cost from it, with your energy
-contract. Gladys attaches it to the main electric meter you set in the energy
-settings; if your utility meter is already in Gladys, the Powerwall measures
-the same house, so attach the index elsewhere (or make it your main meter)
-rather than counting the house twice. The indexes start counting when the
+Backup-only is not offered: Tesla withdrew it on many sites. A site set to it
+from the Tesla app shows "Backup-only" in the energy widget.
+
+The **home consumption index** is **off by default**: turn on **Send the home
+consumption to the energy dashboard** in the settings, then accept the
+**Update** of the site in the Discovery tab. Gladys then computes the
+consumption per half hour and its cost from it, with your energy contract.
+Gladys attaches it to the main electric meter you set in the energy settings:
+if your utility meter is already in Gladys, the Powerwall measures the same
+house, so leave the option off rather than counting the house twice. The
+index keeps counting while the option is off, so turning it on later does not
+start from zero. The indexes start counting when the
 integration is installed: Tesla does not give lifetime totals, they are built
 from the daily totals Teslemetry streams.
 

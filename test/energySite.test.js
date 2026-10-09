@@ -82,7 +82,7 @@ test('operation mode is a text select with the Tesla app modes', () => {
   assert.equal(mode.type, 'select');
   assert.deepEqual(
     mode.supported_options.map((o) => o.value),
-    ['self_consumption', 'autonomous', 'backup'],
+    ['self_consumption', 'autonomous'],
   );
   assert.ok(mode.supported_options.every((o) => o.label));
   assert.deepEqual(operationModeCommand('autonomous'), {
@@ -90,6 +90,10 @@ test('operation mode is a text select with the Tesla app modes', () => {
     body: { default_real_mode: 'autonomous' },
   });
   assert.throws(() => operationModeCommand('turbo'));
+  // "Backup-only" is not offered: Tesla withdrew it on many sites.
+  assert.throws(() => operationModeCommand('backup'));
+  const backup = statesOf({ operationMode: 'backup' }, siteComponents(product(SITES.POWERWALL_2)));
+  assert.equal(backup[F.OPERATION_MODE], undefined, 'no value outside the offered options');
 });
 
 test('backup reserve command', () => {
@@ -101,9 +105,18 @@ test('backup reserve command', () => {
   assert.throws(() => backupReserveCommand('abc'));
 });
 
-test('the home index is an energy-sensor index (Gladys derives consumption and cost)', () => {
+test('the home index is opt-in, an energy-sensor index (Gladys derives consumption and cost)', () => {
   const gladys = createFakeGladys();
-  const device = buildEnergySiteDevice(gladys, product(SITES.POWERWALL_2), { language: 'en' });
+  const byDefault = buildEnergySiteDevice(gladys, product(SITES.POWERWALL_2), { language: 'en' });
+  assert.ok(
+    byDefault.features.every((f) => !f.external_id.endsWith(`:${F.HOME_ENERGY}`)),
+    'off by default: Gladys would attach it to the main meter and count the house twice',
+  );
+  assert.ok(byDefault.features.some((f) => f.external_id.endsWith(`:${F.SOLAR_ENERGY}`)));
+  const device = buildEnergySiteDevice(gladys, product(SITES.POWERWALL_2), {
+    language: 'en',
+    homeEnergyIndex: true,
+  });
   const home = device.features.find((f) => f.external_id.endsWith(`:${F.HOME_ENERGY}`));
   assert.equal(`${home.category}/${home.type}`, 'energy-sensor/index');
   assert.equal(home.unit, 'kilowatt-hour');

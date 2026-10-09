@@ -95,6 +95,20 @@
         { "value": "60", "label": { "en": "Every hour", "fr": "Toutes les heures" } },
         { "value": "0", "label": { "en": "Never (stream only)", "fr": "Jamais (flux seul)" } }
       ]
+    },
+    {
+      "key": "home_energy_index",
+      "type": "boolean",
+      "label": {
+        "en": "Send the home consumption to the energy dashboard",
+        "fr": "Envoyer la consommation de la maison au tableau de bord énergie"
+      },
+      "description": {
+        "en": "Adds a home consumption index (kWh) to each Powerwall site, from which Gladys computes consumption and cost. Gladys attaches it to your main electric meter: leave it off if your utility meter is already in Gladys, or the house is counted twice.",
+        "fr": "Ajoute un index de consommation de la maison (kWh) à chaque site Powerwall, dont Gladys calcule la consommation et le coût. Gladys le rattache à votre compteur électrique principal : laissez-le désactivé si votre compteur (Linky…) est déjà dans Gladys, sinon la maison est comptée deux fois."
+      },
+      "required": false,
+      "default": false
     }
   ],
   "actions": [

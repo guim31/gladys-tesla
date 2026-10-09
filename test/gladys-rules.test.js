@@ -43,7 +43,7 @@ async function discover(configOverrides) {
 const CONFIGS = [
   { units: 'auto', language: 'en' },
   { units: 'metric', language: 'fr' },
-  { units: 'imperial', language: 'en' },
+  { units: 'imperial', language: 'en', home_energy_index: true },
 ];
 
 for (const config of CONFIGS) {

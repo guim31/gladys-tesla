@@ -19,8 +19,9 @@ the notes of the version's GitHub Release.
   follow the car's display (miles / °F or km / °C) unless set otherwise.
 - Tesla energy sites (Powerwall, solar): solar production, home consumption,
   signed grid power, battery charging and discharging, Powerwall charge, grid
-  presence, operation mode (adjustable) and cumulative kWh indexes; the home
-  consumption index feeds the Gladys energy dashboard.
+  presence, operation mode (Self-Powered or Time-Based Control, adjustable) and
+  cumulative kWh indexes. An optional home consumption index (off by default)
+  feeds the Gladys energy dashboard.
 - Real-time updates through the Teslemetry stream; reading never wakes a car.
 - Dashboard widgets: _Tesla vehicle_ and _Tesla energy flow_.
 - Scene triggers: charging started, charging complete, plugged in, unplugged,

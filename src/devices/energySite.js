@@ -53,12 +53,21 @@ export const INDEX_TOTALS = {
   [SITE_FEATURES.BATTERY_DISCHARGE_ENERGY]: 'total_battery_discharge',
 };
 
-// Operation modes (`default_real_mode`), in the order the Tesla app lists them.
+// Operation modes (`default_real_mode`) offered in Gladys, in the order the
+// Tesla app lists them. "Backup-only" is not offered: Tesla withdrew it on many
+// sites, where setting it fails. A site already in that mode is still shown as
+// such (widget), its select simply has no value.
 export const OPERATION_MODES = [
   { value: 'self_consumption', text: 'modeSelfConsumption' },
   { value: 'autonomous', text: 'modeAutonomous' },
-  { value: 'backup', text: 'modeBackup' },
 ];
+
+// Every mode a site can report, for display.
+export const OPERATION_MODE_LABELS = {
+  self_consumption: 'modeSelfConsumption',
+  autonomous: 'modeAutonomous',
+  backup: 'modeBackup',
+};
 
 // Display bounds (W). Gladys never clamps a value to them; they place a gauge
 // needle. The grid bounds are symmetric because the value is signed.
@@ -109,9 +118,16 @@ export function isUsefulSite(product = {}) {
  * The discovery payload of one energy site.
  * @param {object} gladys SDK instance
  * @param {object} product entry of /api/1/products (energy_site_id, site_name, components)
- * @param {{ language: string, siteInfo?: object }} options
+ * @param {{ language: string, siteInfo?: object, homeEnergyIndex?: boolean }} options
+ *   `homeEnergyIndex` publishes the home consumption index (off by default:
+ *   Gladys attaches it to the main electric meter, which would count the house
+ *   twice next to a utility meter already in Gladys)
  */
-export function buildEnergySiteDevice(gladys, product, { language, siteInfo = {} }) {
+export function buildEnergySiteDevice(
+  gladys,
+  product,
+  { language, siteInfo = {}, homeEnergyIndex = false },
+) {
   const ids = energySiteIds(gladys, product.energy_site_id);
   const components = siteComponents(product, siteInfo);
   const feature = (key, name, category, type, extra) => ({
@@ -209,8 +225,9 @@ export function buildEnergySiteDevice(gladys, product, { language, siteInfo = {}
     );
   }
   // Cumulative indexes. The home one is an `energy-sensor/index`: Gladys
-  // derives the 30-minute consumption and its cost from it by itself.
-  if (components.load) {
+  // derives the 30-minute consumption and its cost from it by itself, and
+  // attaches it to the main meter — hence opt-in.
+  if (components.load && homeEnergyIndex) {
     features.push(
       index(
         SITE_FEATURES.HOME_ENERGY,

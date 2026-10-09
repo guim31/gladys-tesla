@@ -188,7 +188,8 @@ test('grid outage and restore on a Powerwall', async () => {
 
 test('daily energy totals become cumulative kWh indexes, persisted', async () => {
   const store = createMemoryStore();
-  const { gladys, tesla } = await setup({ store });
+  const config = { home_energy_index: true };
+  const { gladys, tesla } = await setup({ store, config });
   const site = siteId(SITES.POWERWALL_2);
   for (const event of streamEvents()) await tesla.handleStreamEvent(event);
   assert.equal(gladys.last(`${site}:home-energy`), 19.92); // 18.9 + 1.02 kWh
@@ -198,7 +199,7 @@ test('daily energy totals become cumulative kWh indexes, persisted', async () =>
   assert.equal(store.data.sites[SITES.POWERWALL_2].indexes['home-energy'].published, 19.92);
   await tesla.stop();
   // After a restart the index goes on from where it was, it does not restart at 0.
-  const again = await setup({ store });
+  const again = await setup({ store, config });
   assert.equal(again.gladys.last(`${site}:home-energy`), 19.92);
   await again.tesla.handleStreamEvent({
     site_id: SITES.POWERWALL_2,
@@ -207,6 +208,42 @@ test('daily energy totals become cumulative kWh indexes, persisted', async () =>
   });
   assert.equal(again.gladys.last(`${site}:home-energy`), 20.92);
   await again.tesla.stop();
+});
+
+test('the home index is not published unless enabled, but keeps counting', async () => {
+  const store = createMemoryStore();
+  const { gladys, tesla } = await setup({ store });
+  const site = siteId(SITES.POWERWALL_2);
+  for (const event of streamEvents()) await tesla.handleStreamEvent(event);
+  assert.equal(gladys.last(`${site}:home-energy`), undefined);
+  assert.equal(gladys.last(`${site}:grid-import-energy`), 2.59, 'the other indexes are published');
+  // Turned on later: it starts from what was accumulated, not from zero.
+  await tesla.reconfigure(normalizeConfig({ access_token: 'test-token', home_energy_index: true }));
+  const home = gladys.discovered
+    .find((d) => d.external_id === site)
+    .features.find((f) => f.external_id === `${site}:home-energy`);
+  assert.ok(home, 'offered in the Discovery tab once enabled');
+  gladys.createAll();
+  await tesla.deviceCreated(gladys.devices.find((d) => d.external_id === site));
+  assert.equal(gladys.last(`${site}:home-energy`), 19.92);
+  await tesla.stop();
+});
+
+test('a site in Backup-only mode shows it in the widget', async () => {
+  const { tesla } = await setup();
+  await tesla.handleStreamEvent({
+    site_id: SITES.POWERWALL_3,
+    site_info: { default_real_mode: 'backup', backup_reserve_percent: 100 },
+  });
+  const content = await createWidgets(tesla).energy_flow.get({
+    settings: { device: siteId(SITES.POWERWALL_3) },
+  });
+  const rows = content.components.find((c) => c.type === 'status').items;
+  assert.deepEqual(rows.find((r) => r.icon === 'sliders').value, {
+    en: 'Backup-only',
+    fr: 'Secours uniquement',
+  });
+  await tesla.stop();
 });
 
 test('a solar-only site gets no battery index', async () => {

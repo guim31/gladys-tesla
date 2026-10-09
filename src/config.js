@@ -14,6 +14,7 @@ export const DEFAULT_CONFIG = {
   units: UNIT_SYSTEMS.AUTO,
   language: 'en',
   vehicle_refresh_minutes: '30',
+  home_energy_index: false,
 };
 
 /**
@@ -34,6 +35,7 @@ export function normalizeConfig(raw = {}) {
     )
       ? String(config.vehicle_refresh_minutes)
       : DEFAULT_CONFIG.vehicle_refresh_minutes,
+    home_energy_index: config.home_energy_index === true || config.home_energy_index === 'true',
   };
 }
 

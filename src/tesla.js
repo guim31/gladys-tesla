@@ -155,6 +155,7 @@ export function createTesla({
     return buildEnergySiteDevice(gladys, site.product, {
       language: config.language,
       siteInfo: site.siteInfo,
+      homeEnergyIndex: config.home_energy_index,
     });
   }
 

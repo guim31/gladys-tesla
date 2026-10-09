@@ -15,7 +15,7 @@
 
 import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
 import { VEHICLE_FEATURES } from './devices/vehicle.js';
-import { OPERATION_MODES, SITE_FEATURES } from './devices/energySite.js';
+import { OPERATION_MODE_LABELS, SITE_FEATURES } from './devices/energySite.js';
 import { WIDGET_KEYS } from './tesla.js';
 import { both } from './i18n.js';
 
@@ -265,12 +265,12 @@ function energyFlowContent(view) {
     .filter((id) => exists.has(id));
   const items = [gridRow(snapshot)];
   if (has.battery) {
-    const mode = OPERATION_MODES.find((m) => m.value === snapshot.operationMode);
+    const mode = OPERATION_MODE_LABELS[snapshot.operationMode];
     items.push(
       {
         label: both('operationMode'),
         icon: 'sliders',
-        value: mode ? both(mode.text) : '—',
+        value: mode ? both(mode) : '—',
         color: WIDGET_COLORS.NEUTRAL,
       },
       {

@@ -24,9 +24,10 @@ read.
 **Energy sites** (Powerwall 2, Powerwall 3, Powerwall+, solar-only sites):
 solar production, home consumption, signed grid power (import +, export −),
 battery charging and discharging, Powerwall charge, grid presence, operation
-mode (adjustable), and cumulative kWh indexes. The home consumption index feeds
-the Gladys energy dashboard (30-minute consumption and cost are derived by
-Gladys).
+mode (adjustable), and cumulative kWh indexes. An optional home consumption
+index (off by default, to avoid counting the house twice next to a utility
+meter) feeds the Gladys energy dashboard (30-minute consumption and cost are
+derived by Gladys).
 
 **Dashboard widgets** (Gladys 5.1+): a _Tesla vehicle_ card and a _Tesla energy
 flow_ card. **Scene triggers**: charging started / complete, plugged in /

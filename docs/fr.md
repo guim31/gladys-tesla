@@ -57,11 +57,12 @@ champs, elle ne retire jamais les vôtres.
 
 ### Réglages
 
-| Réglage                            | Rôle                                                                                                                                                                                                                                     |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Unités**                         | Unités des distances et températures **telles que les scènes les stockent et les comparent** : celles de l'écran de la voiture (par défaut), miles et °F, ou kilomètres et °C. Le tableau de bord affiche toujours les unités de chacun. |
-| **Langue des noms d'appareils**    | Noms anglais ou français des fonctionnalités des nouveaux appareils. Gladys garde le nom d'une fonctionnalité une fois l'appareil créé.                                                                                                  |
-| **Relevé de secours des voitures** | Fréquence de lecture d'une voiture **éveillée** qui n'envoie rien par le flux (15, 30 ou 60 minutes, ou jamais). Jamais pendant qu'elle dort.                                                                                            |
+| Réglage                                                             | Rôle                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Unités**                                                          | Unités des distances et températures **telles que les scènes les stockent et les comparent** : celles de l'écran de la voiture (par défaut), miles et °F, ou kilomètres et °C. Le tableau de bord affiche toujours les unités de chacun. |
+| **Langue des noms d'appareils**                                     | Noms anglais ou français des fonctionnalités des nouveaux appareils. Gladys garde le nom d'une fonctionnalité une fois l'appareil créé.                                                                                                  |
+| **Relevé de secours des voitures**                                  | Fréquence de lecture d'une voiture **éveillée** qui n'envoie rien par le flux (15, 30 ou 60 minutes, ou jamais). Jamais pendant qu'elle dort.                                                                                            |
+| **Envoyer la consommation de la maison au tableau de bord énergie** | Désactivé par défaut. Ajoute l'index de consommation aux sites Powerwall (voir plus bas).                                                                                                                                                |
 
 Changer les **Unités** d'une voiture déjà ajoutée : l'onglet Découverte propose
 une **Mise à jour**. Tant que vous ne l'acceptez pas, la voiture continue d'être
@@ -95,23 +96,30 @@ Chaque site d'énergie reçoit les fonctionnalités de ce qu'il possède : un si
 uniquement solaire n'a pas de batterie, un Powerwall sans panneaux pas de
 production solaire.
 
-| Fonctionnalité                    | Détails                                                                          |
-| --------------------------------- | -------------------------------------------------------------------------------- |
-| Production solaire                | W                                                                                |
-| Consommation de la maison         | W, mesurée par la passerelle                                                     |
-| Réseau (soutirage +, injection −) | W, **signé** : positif quand vous tirez du réseau, négatif quand vous y injectez |
-| Charge / décharge de la batterie  | W, deux fonctionnalités (toutes deux positives)                                  |
-| Charge du Powerwall               | %                                                                                |
-| Réseau présent                    | Éteint pendant une coupure (la maison tourne sur le Powerwall)                   |
-| Mode de fonctionnement            | Autoconsommation, Contrôle horaire ou Secours uniquement, **réglable**           |
-| Index d'énergie                   | kWh cumulés : consommation, production solaire, soutirage et injection, batterie |
+| Fonctionnalité                    | Détails                                                                                |
+| --------------------------------- | -------------------------------------------------------------------------------------- |
+| Production solaire                | W                                                                                      |
+| Consommation de la maison         | W, mesurée par la passerelle                                                           |
+| Réseau (soutirage +, injection −) | W, **signé** : positif quand vous tirez du réseau, négatif quand vous y injectez       |
+| Charge / décharge de la batterie  | W, deux fonctionnalités (toutes deux positives)                                        |
+| Charge du Powerwall               | %                                                                                      |
+| Réseau présent                    | Éteint pendant une coupure (la maison tourne sur le Powerwall)                         |
+| Mode de fonctionnement            | Autoconsommation ou Contrôle horaire, **réglable**                                     |
+| Index d'énergie                   | kWh cumulés : production solaire, soutirage et injection, batterie (maison : plus bas) |
 
-L'**index de consommation** se branche sur le tableau de bord énergie de Gladys :
-Gladys en calcule la consommation par demi-heure et son coût, avec votre
+Le mode « Secours uniquement » n'est pas proposé : Tesla l'a retiré sur de
+nombreux sites. Un site réglé ainsi depuis l'application Tesla l'affiche dans
+le widget énergie.
+
+L'**index de consommation de la maison** est **désactivé par défaut** : activez
+**Envoyer la consommation de la maison au tableau de bord énergie** dans les
+réglages, puis acceptez la **Mise à jour** du site dans l'onglet Découverte.
+Gladys en calcule alors la consommation par demi-heure et son coût, avec votre
 contrat d'énergie. Gladys le rattache au compteur électrique principal défini
-dans les réglages énergie ; si votre compteur (Linky…) est déjà dans Gladys,
-le Powerwall mesure la même maison : rattachez l'index ailleurs (ou faites-en
-votre compteur principal) plutôt que de compter la maison deux fois. Les index
+dans les réglages énergie : si votre compteur (Linky…) est déjà dans Gladys, le
+Powerwall mesure la même maison, laissez donc l'option désactivée plutôt que de
+compter la maison deux fois. L'index continue de compter tant que l'option est
+désactivée : l'activer plus tard ne repart pas de zéro. Les index
 commencent à compter à l'installation de l'intégration : Tesla ne donne pas de
 totaux depuis la mise en service, ils sont construits à partir des totaux
 journaliers que Teslemetry diffuse.
