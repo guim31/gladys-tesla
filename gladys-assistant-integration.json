@@ -90,7 +90,6 @@
       "required": false,
       "default": "30",
       "options": [
-        { "value": "15", "label": { "en": "Every 15 minutes", "fr": "Toutes les 15 minutes" } },
         { "value": "30", "label": { "en": "Every 30 minutes", "fr": "Toutes les 30 minutes" } },
         { "value": "60", "label": { "en": "Every hour", "fr": "Toutes les heures" } },
         { "value": "0", "label": { "en": "Never (stream only)", "fr": "Jamais (flux seul)" } }

@@ -5,9 +5,10 @@ depuis Gladys : batterie, autonomie, charge, climatisation, verrouillage, mode
 Sentinelle, et les flux d'énergie de la maison en temps réel.
 
 > **Développée sans le matériel : retours bienvenus.** Cette intégration a été
-> construite et testée sur de vraies réponses de l'API Tesla (anonymisées), pas
-> sur une voiture ni sur un Powerwall. Si quelque chose vous semble faux,
-> dites-le sur le forum Gladys.
+> construite sans voiture, sans Powerwall ni compte Teslemetry, et testée sur
+> des exemples de réponses de l'API adaptés des tests de l'intégration
+> Teslemetry de Home Assistant et de la documentation de l'API Fleet de Tesla.
+> Si quelque chose vous semble faux, dites-le sur le forum Gladys.
 
 Cette intégration n'est affiliée ni à Tesla, Inc. ni à Teslemetry.
 
@@ -61,7 +62,7 @@ champs, elle ne retire jamais les vôtres.
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Unités**                                                          | Unités des distances et températures **telles que les scènes les stockent et les comparent** : celles de l'écran de la voiture (par défaut), miles et °F, ou kilomètres et °C. Le tableau de bord affiche toujours les unités de chacun. |
 | **Langue des noms d'appareils**                                     | Noms anglais ou français des fonctionnalités des nouveaux appareils. Gladys garde le nom d'une fonctionnalité une fois l'appareil créé.                                                                                                  |
-| **Relevé de secours des voitures**                                  | Fréquence de lecture d'une voiture **éveillée** qui n'envoie rien par le flux (15, 30 ou 60 minutes, ou jamais). Jamais pendant qu'elle dort.                                                                                            |
+| **Relevé de secours des voitures**                                  | Fréquence de lecture d'une voiture **éveillée** qui n'envoie rien par le flux (30 ou 60 minutes, ou jamais). Jamais pendant qu'elle dort.                                                                                                |
 | **Envoyer la consommation de la maison au tableau de bord énergie** | Désactivé par défaut. Ajoute l'index de consommation aux sites Powerwall (voir plus bas).                                                                                                                                                |
 
 Changer les **Unités** d'une voiture déjà ajoutée : l'onglet Découverte propose
@@ -189,7 +190,7 @@ encore ; la commande continue et son résultat s'affiche quand la voiture répon
   de fonctionnalité d'appareil : elle s'affiche dans le widget énergie et se
   règle par l'action de scène.
 - Les voitures anciennes sans Fleet Telemetry ne sont rafraîchies que depuis le
-  cache de Teslemetry (toutes les 15 à 60 minutes quand elles sont éveillées).
+  cache de Teslemetry (toutes les 30 ou 60 minutes quand elles sont éveillées).
 - Les noms des fonctionnalités sont fixés à la création de l'appareil et ne
   suivent pas un changement de langue ultérieur.
 

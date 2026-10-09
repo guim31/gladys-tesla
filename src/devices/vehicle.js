@@ -71,7 +71,12 @@ export const CHARGE_LIMIT_MIN = 50;
 export const CHARGE_LIMIT_MAX = 100;
 export const CABIN_TEMP_MIN_C = 15;
 export const CABIN_TEMP_MAX_C = 28;
-const DEFAULT_MAX_CHARGE_CURRENT = 48; // North American Wall Connector
+// Display bound of the charging current setpoint: the North American Wall
+// Connector. Fixed on purpose — the car's actual maximum follows the charger
+// plugged in, and a bound that moved would change the device structure (and
+// re-offer "Update" in Discovery) at every charger; commands are clamped to
+// the actual maximum instead (vehicleCommand).
+export const CHARGE_CURRENT_MAX = 48;
 
 const MODELS = {
   model3: 'Model 3',
@@ -261,18 +266,14 @@ export function isPlugged(snapshot) {
  * The discovery payload of one car.
  * @param {object} gladys SDK instance
  * @param {object} product entry of /api/1/products (vin, display_name, vehicle_config)
- * @param {{ language: string, units: { distance: string, temperature: string }, snapshot?: object }} options
+ * @param {{ language: string, units: { distance: string, temperature: string } }} options
  */
-export function buildVehicleDevice(gladys, product, { language, units, snapshot = {} }) {
+export function buildVehicleDevice(gladys, product, { language, units }) {
   const ids = vehicleIds(gladys, product.vin);
   const model = vehicleModel(product);
   const tempF = units.temperature === UNITS.FAHRENHEIT;
   const cabinMin = tempF ? 59 : CABIN_TEMP_MIN_C;
   const cabinMax = tempF ? 82 : CABIN_TEMP_MAX_C;
-  const maxCurrent = Math.max(
-    1,
-    Math.round(snapshot.chargeCurrentMax ?? DEFAULT_MAX_CHARGE_CURRENT),
-  );
   const feature = (key, name, category, type, extra) => ({
     name: t(language, name),
     external_id: ids.feature(key),
@@ -289,6 +290,8 @@ export function buildVehicleDevice(gladys, product, { language, units, snapshot 
   return {
     name: product.display_name?.trim() || `Tesla ${model}`,
     external_id: ids.device,
+    // The runtime keeps its own pace (stream + slow fallback reads).
+    should_poll: false,
     model,
     features: [
       feature(
@@ -338,7 +341,7 @@ export function buildVehicleDevice(gladys, product, { language, units, snapshot 
         'chargeCurrent',
         CATEGORIES.ELECTRICAL_VEHICLE_CHARGE,
         TYPES.ELECTRICAL_VEHICLE_CHARGE.TARGET_CURRENT,
-        { ...command, unit: UNITS.AMPERE, min: 1, max: maxCurrent },
+        { ...command, unit: UNITS.AMPERE, min: 1, max: CHARGE_CURRENT_MAX },
       ),
       feature(
         VEHICLE_FEATURES.PLUGGED,
@@ -462,7 +465,7 @@ export function vehicleStates(snapshot, unitOf) {
  * wait for the stream to echo it).
  * @returns {{ command: string, body?: object, optimistic: object }}
  */
-export function vehicleCommand(featureKey, value, unit) {
+export function vehicleCommand(featureKey, value, unit, snapshot = {}) {
   const on = Number(value) === 1;
   switch (featureKey) {
     case VEHICLE_FEATURES.CHARGING:
@@ -478,7 +481,11 @@ export function vehicleCommand(featureKey, value, unit) {
       };
     }
     case VEHICLE_FEATURES.CHARGE_CURRENT: {
-      const amps = Math.max(1, Math.round(Number(value)));
+      // The car's actual maximum follows the charger plugged in.
+      const max = Number.isFinite(snapshot.chargeCurrentMax)
+        ? Math.min(snapshot.chargeCurrentMax, CHARGE_CURRENT_MAX)
+        : CHARGE_CURRENT_MAX;
+      const amps = clamp(Math.round(Number(value)), 1, Math.max(1, Math.round(max)));
       return {
         command: 'set_charging_amps',
         body: { charging_amps: amps },

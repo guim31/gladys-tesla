@@ -5,9 +5,10 @@ Gladys: battery, range, charging, climate, locks, Sentry Mode, and the energy
 flows of your home in real time.
 
 > **Developed without the hardware: feedback welcome.** This integration was
-> built and tested against real Tesla API responses (anonymized), not against a
-> car or a Powerwall. If something looks wrong, please say so on the Gladys
-> forum.
+> built without a car, a Powerwall or a Teslemetry account, and tested on
+> sample API answers adapted from the Home Assistant Teslemetry integration's
+> tests and the Tesla Fleet API documentation. If something looks wrong, please
+> say so on the Gladys forum.
 
 This integration is not affiliated with Tesla, Inc. or Teslemetry.
 
@@ -56,7 +57,7 @@ odometer, display units). It only adds fields, it never removes yours.
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Units**                                             | Units of distances and temperatures **as stored and compared by scenes**: the car's own display setting (default), miles and °F, or kilometers and °C. The dashboard always shows each user's preferred units, whatever you pick. |
 | **Device names language**                             | English or French names for the features of new devices. Gladys keeps a feature's name once the device is created.                                                                                                                |
-| **Backup refresh of the cars**                        | How often an **awake** car that streams nothing is read (15, 30 or 60 minutes, or never). Never while the car sleeps.                                                                                                             |
+| **Backup refresh of the cars**                        | How often an **awake** car that streams nothing is read (30 or 60 minutes, or never). Never while the car sleeps.                                                                                                                 |
 | **Send the home consumption to the energy dashboard** | Off by default. Adds the home consumption index to Powerwall sites (see below).                                                                                                                                                   |
 
 Changing **Units** on a car you already added: the Discovery tab offers an
@@ -176,7 +177,7 @@ up; the command goes on and its result shows when the car answers.
   "charging" and "discharging". The backup reserve has no device feature
   either: it is shown in the energy widget and set with the scene action.
 - Older cars without Fleet Telemetry are refreshed from Teslemetry's cache
-  only (every 15 to 60 minutes while awake).
+  only (every 30 or 60 minutes while awake).
 - Feature names are set when the device is created and do not follow later
   language changes.
 

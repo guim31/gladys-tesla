@@ -23,7 +23,9 @@ test('a pasted token is cleaned, unknown choices fall back', () => {
   assert.equal(config.units, 'auto');
   assert.equal(config.language, 'en');
   assert.equal(config.vehicle_refresh_minutes, '30');
-  assert.equal(vehicleRefreshMs(normalizeConfig({ vehicle_refresh_minutes: 15 })), 15 * 60 * 1000);
+  assert.equal(vehicleRefreshMs(normalizeConfig({ vehicle_refresh_minutes: 60 })), 60 * 60 * 1000);
+  // 15 minutes was withdrawn (it may keep a car awake): an old value becomes 30.
+  assert.equal(normalizeConfig({ vehicle_refresh_minutes: '15' }).vehicle_refresh_minutes, '30');
   assert.equal(vehicleRefreshMs(normalizeConfig({ vehicle_refresh_minutes: '0' })), 0);
 });
 

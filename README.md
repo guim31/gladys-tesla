@@ -4,9 +4,12 @@ A [Gladys Assistant](https://gladysassistant.com) external integration for
 **Tesla cars, Powerwall and solar**, through
 [Teslemetry](https://teslemetry.com), a relay of the official Tesla Fleet API.
 
-> **Developed without the hardware: feedback welcome.** Built and tested
-> against real, anonymized Tesla API responses, not against a car or a
-> Powerwall. Reports from owners are very welcome on the Gladys forum.
+> **Developed without the hardware: feedback welcome.** No car, Powerwall or
+> Teslemetry account was used. The tests run on fixtures adapted from the test
+> data of the Home Assistant Teslemetry integration and of the
+> `teslemetry-stream` library, completed by hand after the Tesla Fleet API
+> documentation (anonymized: fake VINs, identifiers and names). Reports from
+> owners are very welcome on the Gladys forum.
 
 **Not affiliated with Tesla, Inc. or Teslemetry.** Tesla, Powerwall, Model 3,
 Model Y, Model S, Model X and Cybertruck are trademarks of Tesla, Inc.
@@ -65,7 +68,7 @@ Teslemetry handles all of it behind a single token.
   Teslemetry subscriptions.
 - **REST reads** only at startup (Teslemetry's cached `vehicle_data`, which
   never wakes a car) and as a slow fallback: an awake car that streams nothing
-  is read every 15 / 30 / 60 minutes (configurable), the products and the
+  is read every 30 or 60 minutes (configurable), the products and the
   energy sites every 15 / 10 minutes while the stream is down.
 - **Commands** go through the Fleet API endpoints relayed by Teslemetry, which
   signs them and wakes the car when needed. Nothing else ever wakes a car.

@@ -75,7 +75,7 @@ const SITE_WIDGET_FIELDS = [
   'stormModeActive',
 ];
 // Snapshot fields the device structure depends on.
-const VEHICLE_STRUCTURE_FIELDS = ['distanceUnit', 'temperatureUnit', 'chargeCurrentMax'];
+const VEHICLE_STRUCTURE_FIELDS = ['distanceUnit', 'temperatureUnit'];
 
 export const STATUS_MESSAGES = {
   noToken: {
@@ -147,7 +147,6 @@ export function createTesla({
     return buildVehicleDevice(gladys, vehicle.product, {
       language: config.language,
       units: vehicleUnits(config.units, vehicle.snapshot),
-      snapshot: vehicle.snapshot,
     });
   }
 
@@ -723,7 +722,7 @@ export function createTesla({
       const vehicle = findVehicle(device.external_id);
       if (vehicle) {
         const unit = unitResolver(device.external_id, vehicleDevice(vehicle))(key);
-        const order = vehicleCommand(key, value, unit);
+        const order = vehicleCommand(key, value, unit, vehicle.snapshot);
         if (!order) throw new Error(`${feature.name ?? key} is read-only`);
         logger.info(`Command ${order.command} → ${vehicle.product.display_name ?? 'vehicle'}`);
         await client.vehicleCommand(vehicle.product.vin, order.command, order.body);

@@ -126,6 +126,11 @@ test('commands map to the Fleet API, bounded like Tesla bounds them', () => {
   assert.deepEqual(vehicleCommand(F.CHARGE_LIMIT, 120).body, { percent: 100 });
   assert.deepEqual(vehicleCommand(F.CHARGE_LIMIT, 20).body, { percent: 50 });
   assert.deepEqual(vehicleCommand(F.CHARGE_CURRENT, 32.4).body, { charging_amps: 32 });
+  // Clamped to what the charger plugged in allows.
+  assert.deepEqual(vehicleCommand(F.CHARGE_CURRENT, 40, undefined, { chargeCurrentMax: 16 }).body, {
+    charging_amps: 16,
+  });
+  assert.deepEqual(vehicleCommand(F.CHARGE_CURRENT, 80).body, { charging_amps: 48 });
   assert.equal(vehicleCommand(F.CLIMATE, 1).command, 'auto_conditioning_start');
   assert.equal(vehicleCommand(F.LOCKED, 0).command, 'door_unlock');
   assert.deepEqual(vehicleCommand(F.SENTRY_MODE, 1).body, { on: true });
@@ -156,5 +161,13 @@ test('the device keys its external ids on the VIN, never on the name', () => {
     renamed.features.map((f) => f.external_id),
     device.features.map((f) => f.external_id),
   );
-  assert.equal(device.should_poll, undefined, 'the runtime keeps its own pace');
+  assert.equal(device.should_poll, false, 'the runtime keeps its own pace');
+  assert.equal(device.poll_frequency, undefined);
+  const current = device.features.find((f) => f.external_id.endsWith(`:${F.CHARGE_CURRENT}`));
+  assert.equal(current.max, 48, 'fixed: does not follow the charger plugged in');
+  const onOtherCharger = buildVehicleDevice(gladys, product, {
+    language: 'en',
+    units: vehicleUnits('metric'),
+  });
+  assert.deepEqual(onOtherCharger, device, 'the structure does not depend on live values');
 });

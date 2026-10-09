@@ -285,6 +285,8 @@ export function buildEnergySiteDevice(
   return {
     name: product.site_name?.trim() || siteInfo.site_name?.trim() || t(language, 'energySite'),
     external_id: ids.device,
+    // The runtime keeps its own pace (stream + slow fallback reads).
+    should_poll: false,
     model: siteModel(product, siteInfo),
     features,
   };

@@ -7,7 +7,9 @@
 export const UNIT_SYSTEMS = { AUTO: 'auto', METRIC: 'metric', IMPERIAL: 'imperial' };
 export const LANGUAGES = ['en', 'fr'];
 // Minutes between two fallback vehicle_data reads ('0' = streaming only).
-export const VEHICLE_REFRESH_CHOICES = ['0', '15', '30', '60'];
+// No faster choice: reading an awake car that often may keep it from falling
+// asleep, and drain its battery.
+export const VEHICLE_REFRESH_CHOICES = ['0', '30', '60'];
 
 export const DEFAULT_CONFIG = {
   access_token: '',
@@ -30,13 +32,15 @@ export function normalizeConfig(raw = {}) {
       .replace(/^bearer\s+/i, ''),
     units: Object.values(UNIT_SYSTEMS).includes(config.units) ? config.units : DEFAULT_CONFIG.units,
     language: LANGUAGES.includes(config.language) ? config.language : DEFAULT_CONFIG.language,
-    vehicle_refresh_minutes: VEHICLE_REFRESH_CHOICES.includes(
-      String(config.vehicle_refresh_minutes),
-    )
-      ? String(config.vehicle_refresh_minutes)
-      : DEFAULT_CONFIG.vehicle_refresh_minutes,
+    vehicle_refresh_minutes: normalizeRefresh(config.vehicle_refresh_minutes),
     home_energy_index: config.home_energy_index === true || config.home_energy_index === 'true',
   };
+}
+
+// Anything else (an older '15', a typed value) falls back to the default.
+function normalizeRefresh(value) {
+  const choice = String(value);
+  return VEHICLE_REFRESH_CHOICES.includes(choice) ? choice : DEFAULT_CONFIG.vehicle_refresh_minutes;
 }
 
 /** Fallback refresh period in milliseconds, 0 when disabled. */
