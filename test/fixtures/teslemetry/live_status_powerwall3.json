@@ -1,0 +1,17 @@
+{
+  "response": {
+    "solar_power": 0,
+    "percentage_charged": 67.4,
+    "backup_capable": true,
+    "battery_power": -2100,
+    "load_power": 1350,
+    "grid_status": "Active",
+    "grid_services_active": false,
+    "grid_power": 3450,
+    "grid_services_power": 0,
+    "generator_power": 0,
+    "island_status": "on_grid",
+    "storm_mode_active": false,
+    "timestamp": "2026-10-01T18:00:00-04:00"
+  }
+}

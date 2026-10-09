@@ -1,169 +1,351 @@
 // -----------------------------------------------------------------------------
 // Dashboard widgets (SDK v0.14+, Gladys 5.1+).
 //
-// A widget puts the integration's own data on the Gladys dashboard without a
-// dedicated core widget. The manifest `widgets` field declares its identity
-// (key, label, icon, optional per-instance `settings`); at runtime the
-// integration returns a DECLARATIVE content — `text`, `value`, `gauge`,
-// `status`, `chart`, `card-list`, `image`, `button` — that the core renders
-// with its own theme, dark mode and translations. No HTML, no CSS.
+//   - `vehicle`: one car — live tiles (battery, range, charging power, cabin
+//     temperature), a status list, and buttons for climate, charging and locks;
+//   - `energy_flow`: one energy site — live tiles for every flow, the last
+//     24 hours as a chart, and the site's state (grid, mode, backup reserve).
 //
-// Each entry of WIDGETS is keyed by the widget `key` and exposes:
-//   - get(gladys, { settings, language, units, config }): the content,
-//     registered by index.js with `gladys.onWidgetGet(key, ...)`;
-//   - action(gladys, { actionKey, params, settings, config }) (optional): a
-//     tapped `button` carrying an `action`, registered with
-//     `gladys.onWidgetAction`.
-//
-// Check your contents in the tests with `validateWidgetContent` (exported by
-// the SDK, see test/widgets.test.js), or run with DEBUG=gladys-integration-sdk
-// to have the SDK log every violation of the vocabulary and the budget.
+// The tiles and the chart are bound to device features: they move in real time
+// and Gladys converts their unit to the viewer's preference (miles, °F...).
+// The status rows and the button labels are computed here: the runtime nudges
+// the widgets when they change (src/tesla.js), the TTL is a safety net.
+// Budget of the core: 8 components, 6 tiles, 1 status, 4 buttons, 2 texts.
 // -----------------------------------------------------------------------------
 
-import {
-  createLogger,
-  DEVICE_FEATURE_CATEGORIES,
-  DEVICE_TRANSPORTS,
-  WIDGET_COLORS,
-} from '@gladysassistant/integration-sdk';
-import { identifyDevice } from './devices/index.js';
-import { weatherStation } from './devices/weatherStation.js';
-import { plug } from './devices/plug.js';
-import { light } from './devices/light.js';
+import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
+import { VEHICLE_FEATURES } from './devices/vehicle.js';
+import { OPERATION_MODE_LABELS, SITE_FEATURES } from './devices/energySite.js';
+import { WIDGET_KEYS } from './tesla.js';
+import { both } from './i18n.js';
 
-const logger = createLogger({ name: 'widgets' });
-
-// Widget key, as declared in the manifest `widgets` field.
-export const DEMO_STATUS_WIDGET = 'demo_status';
-
-// Keys of the `button` actions the demo_status content declares.
-const DEMO_STATUS_ACTIONS = { IDENTIFY_LIGHT: 'identify_light' };
-
-// How the plug transport reads in the status list.
-const TRANSPORT_STATUS = {
-  [DEVICE_TRANSPORTS.LOCAL]: { value: { en: 'Local', fr: 'Locale' }, color: WIDGET_COLORS.SUCCESS },
-  [DEVICE_TRANSPORTS.CLOUD]: { value: { en: 'Cloud', fr: 'Cloud' }, color: WIDGET_COLORS.INFO },
-  [DEVICE_TRANSPORTS.UNREACHABLE]: {
-    value: { en: 'Unreachable', fr: 'Injoignable' },
-    color: WIDGET_COLORS.DANGER,
-  },
+const pickDevice = {
+  en: 'Choose a device in the widget settings.',
+  fr: 'Choisissez un appareil dans les réglages du widget.',
 };
 
-// A live tile references a feature by its external_id: read it from the
-// discovery payload itself, so the widget and the device never disagree.
-function featureExternalId(gladys, config, blueprint, category) {
-  const device = blueprint.buildDevice(gladys, config);
-  return device.features.find((feature) => feature.category === category).external_id;
+function message(text) {
+  return { ttl_seconds: 300, components: [{ type: 'text', variant: 'body', text }] };
 }
 
-function plugConnectionStatus(gladys, config) {
-  const { transport, degraded } = plug.transport(gladys, config);
-  const { value, color } = TRANSPORT_STATUS[transport];
-  if (degraded) {
+const percent = (value) => (Number.isFinite(value) ? `${Math.round(value)} %` : '—');
+
+// Charge session as one status row.
+function chargeRow(snapshot, plugged) {
+  const label = { en: 'Charging', fr: 'Charge' };
+  switch (snapshot.chargingState) {
+    case 'Charging':
+    case 'Starting':
+      return {
+        label,
+        icon: 'zap',
+        value: { en: 'Charging', fr: 'En charge' },
+        color: WIDGET_COLORS.SUCCESS,
+      };
+    case 'Complete':
+      return {
+        label,
+        icon: 'battery',
+        value: { en: 'Complete', fr: 'Terminée' },
+        color: WIDGET_COLORS.INFO,
+      };
+    case 'Stopped':
+      return {
+        label,
+        icon: 'pause',
+        value: { en: 'Stopped', fr: 'Arrêtée' },
+        color: WIDGET_COLORS.WARNING,
+      };
+    case 'NoPower':
+      return {
+        label,
+        icon: 'alert-triangle',
+        value: { en: 'No power', fr: 'Pas de courant' },
+        color: WIDGET_COLORS.DANGER,
+      };
+    default:
+      return plugged === false
+        ? {
+            label,
+            icon: 'battery',
+            value: { en: 'Unplugged', fr: 'Débranchée' },
+            color: WIDGET_COLORS.NEUTRAL,
+          }
+        : { label, icon: 'battery', value: '—', color: WIDGET_COLORS.NEUTRAL };
+  }
+}
+
+function vehicleContent(view) {
+  const { device, snapshot, plugged } = view;
+  const ref = (key) => `${device.external_id}:${key}`;
+  const onOff = (value, on, off) => (value === true ? on : value === false ? off : '—');
+  const components = [
+    {
+      type: 'value',
+      label: { en: 'Battery', fr: 'Batterie' },
+      icon: 'battery',
+      device_feature: ref(VEHICLE_FEATURES.BATTERY_LEVEL),
+    },
+    {
+      type: 'value',
+      label: { en: 'Range', fr: 'Autonomie' },
+      icon: 'navigation',
+      device_feature: ref(VEHICLE_FEATURES.RANGE),
+    },
+    {
+      type: 'value',
+      label: { en: 'Charging power', fr: 'Puissance' },
+      icon: 'zap',
+      device_feature: ref(VEHICLE_FEATURES.CHARGE_POWER),
+    },
+    {
+      type: 'value',
+      label: { en: 'Cabin', fr: 'Habitacle' },
+      icon: 'thermometer',
+      device_feature: ref(VEHICLE_FEATURES.INSIDE_TEMPERATURE),
+    },
+    {
+      type: 'status',
+      items: [
+        chargeRow(snapshot, plugged),
+        {
+          label: { en: 'Charge limit', fr: 'Limite de charge' },
+          icon: 'sliders',
+          value: percent(snapshot.chargeLimit),
+          color: WIDGET_COLORS.NEUTRAL,
+        },
+        {
+          label: { en: 'Climate', fr: 'Climatisation' },
+          icon: 'wind',
+          value: onOff(
+            snapshot.climateOn,
+            { en: 'On', fr: 'En marche' },
+            { en: 'Off', fr: 'Arrêtée' },
+          ),
+          color: snapshot.climateOn ? WIDGET_COLORS.SUCCESS : WIDGET_COLORS.NEUTRAL,
+        },
+        {
+          label: { en: 'Doors', fr: 'Portes' },
+          icon: snapshot.locked === false ? 'unlock' : 'lock',
+          value: onOff(
+            snapshot.locked,
+            { en: 'Locked', fr: 'Verrouillées' },
+            { en: 'Unlocked', fr: 'Déverrouillées' },
+          ),
+          color: snapshot.locked === false ? WIDGET_COLORS.WARNING : WIDGET_COLORS.SUCCESS,
+        },
+        {
+          label: both('sentry'),
+          icon: 'eye',
+          value: onOff(snapshot.sentry, { en: 'On', fr: 'Activé' }, { en: 'Off', fr: 'Désactivé' }),
+          color: snapshot.sentry ? WIDGET_COLORS.INFO : WIDGET_COLORS.NEUTRAL,
+        },
+        {
+          label: { en: 'Vehicle', fr: 'Véhicule' },
+          icon: snapshot.online ? 'wifi' : 'moon',
+          value: onOff(
+            snapshot.online,
+            { en: 'Online', fr: 'En ligne' },
+            { en: 'Asleep', fr: 'Endormie' },
+          ),
+          color: snapshot.online ? WIDGET_COLORS.SUCCESS : WIDGET_COLORS.NEUTRAL,
+        },
+      ],
+    },
+  ];
+  // Buttons: one per order, labelled with what a tap does now.
+  components.push(
+    snapshot.climateOn
+      ? {
+          type: 'button',
+          label: { en: 'Stop climate', fr: 'Arrêter la clim' },
+          icon: 'wind',
+          action: { key: 'climate_off' },
+        }
+      : {
+          type: 'button',
+          label: { en: 'Start climate', fr: 'Lancer la clim' },
+          icon: 'wind',
+          action: { key: 'climate_on' },
+        },
+  );
+  if (snapshot.chargingState === 'Charging' || snapshot.chargingState === 'Starting') {
+    components.push({
+      type: 'button',
+      label: { en: 'Stop charging', fr: 'Arrêter la charge' },
+      icon: 'zap-off',
+      action: { key: 'charge_stop' },
+    });
+  } else if (plugged) {
+    components.push({
+      type: 'button',
+      label: { en: 'Start charging', fr: 'Lancer la charge' },
+      icon: 'zap',
+      action: { key: 'charge_start' },
+    });
+  }
+  components.push(
+    snapshot.locked === false
+      ? {
+          type: 'button',
+          label: { en: 'Lock', fr: 'Verrouiller' },
+          icon: 'lock',
+          action: { key: 'lock' },
+        }
+      : {
+          type: 'button',
+          label: { en: 'Unlock', fr: 'Déverrouiller' },
+          icon: 'unlock',
+          style: 'danger',
+          // A dashboard can hang on a wall: unlocking asks first.
+          action: { key: 'unlock', confirm: true },
+        },
+  );
+  return { ttl_seconds: 300, components };
+}
+
+// Widget action key → [feature, value, toast].
+const VEHICLE_ACTIONS = {
+  climate_on: [VEHICLE_FEATURES.CLIMATE, 1, { en: 'Climate starting', fr: 'Climatisation lancée' }],
+  climate_off: [
+    VEHICLE_FEATURES.CLIMATE,
+    0,
+    { en: 'Climate stopped', fr: 'Climatisation arrêtée' },
+  ],
+  charge_start: [VEHICLE_FEATURES.CHARGING, 1, { en: 'Charging starting', fr: 'Charge lancée' }],
+  charge_stop: [VEHICLE_FEATURES.CHARGING, 0, { en: 'Charging stopped', fr: 'Charge arrêtée' }],
+  lock: [VEHICLE_FEATURES.LOCKED, 1, { en: 'Vehicle locked', fr: 'Véhicule verrouillé' }],
+  unlock: [VEHICLE_FEATURES.LOCKED, 0, { en: 'Vehicle unlocked', fr: 'Véhicule déverrouillé' }],
+};
+
+function gridRow(snapshot) {
+  const label = { en: 'Grid', fr: 'Réseau' };
+  if (snapshot.gridConnected === true) {
     return {
-      value: { en: `${value.en} (degraded mode)`, fr: `${value.fr} (mode dégradé)` },
-      color: WIDGET_COLORS.WARNING,
+      label,
+      icon: 'zap',
+      value: { en: 'Connected', fr: 'Présent' },
+      color: WIDGET_COLORS.SUCCESS,
     };
   }
-  return { value, color };
+  if (snapshot.gridConnected === false) {
+    return snapshot.islandStatus === 'off_grid_intentional'
+      ? {
+          label,
+          icon: 'zap-off',
+          value: { en: 'Off-grid (manual)', fr: 'Hors réseau (manuel)' },
+          color: WIDGET_COLORS.WARNING,
+        }
+      : {
+          label,
+          icon: 'zap-off',
+          value: { en: 'Outage', fr: 'Coupure' },
+          color: WIDGET_COLORS.DANGER,
+        };
+  }
+  return { label, icon: 'zap', value: '—', color: WIDGET_COLORS.NEUTRAL };
 }
 
-export const WIDGETS = {
-  [DEMO_STATUS_WIDGET]: {
-    // `settings` holds the per-instance values of the declared `settings`
-    // (none here); `language` and `units` are those of the user viewing the
-    // dashboard, for the values you format yourself. Multi-language objects
-    // (`{ en, fr }`) are picked by the core, like everywhere else.
-    async get(gladys, { config }) {
-      logger.debug(`onWidgetGet <- ${DEMO_STATUS_WIDGET}`);
-      return {
-        // Reload policy: the computed parts below only change with the
-        // config, and index.js nudges the widget on every (re)connection and
-        // config update (see refreshWidgets) — the TTL is just a safety net.
-        ttl_seconds: 300,
-        components: [
-          // Device-bound tiles: LIVE, they follow the published states over
-          // the core's real-time path. No TTL, no nudge involved.
-          {
-            type: 'value',
-            label: { en: 'Temperature', fr: 'Température' },
-            icon: 'thermometer',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              weatherStation,
-              DEVICE_FEATURE_CATEGORIES.TEMPERATURE_SENSOR,
-            ),
-          },
-          {
-            type: 'value',
-            label: { en: 'Office plug', fr: 'Prise du bureau' },
-            icon: 'zap',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              plug,
-              DEVICE_FEATURE_CATEGORIES.ENERGY_SENSOR,
-            ),
-          },
-          // Computed rows: what the integration knows that no device feature
-          // carries. Served from the core cache until the TTL or a nudge.
-          {
-            type: 'status',
-            items: [
-              {
-                label: { en: 'Plug connection', fr: 'Connexion de la prise' },
-                icon: 'wifi',
-                ...plugConnectionStatus(gladys, config),
-              },
-              {
-                label: { en: 'Observed location', fr: 'Position observée' },
-                icon: 'map-pin',
-                value: `${config.latitude.toFixed(2)}, ${config.longitude.toFixed(2)}`,
-                color: WIDGET_COLORS.NEUTRAL,
-              },
-            ],
-          },
-          // `params` are declared HERE and sent back as-is: the handler never
-          // receives user input (a dashboard can hang on a public wall).
-          {
-            type: 'button',
-            label: { en: 'Identify the light', fr: 'Identifier la lampe' },
-            icon: 'eye',
-            style: 'secondary',
-            action: {
-              key: DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT,
-              params: { device: light.deviceExternalId(gladys) },
-            },
-          },
-        ],
-      };
-    },
-
-    // Resolve an optional toast (string or multi-language object, ≤ 200
-    // characters). After a successful action the core drops the cached
-    // content and every open dashboard refetches it: no nudge needed.
-    async action(gladys, { actionKey, params, config }) {
-      logger.info(`onWidgetAction <- ${DEMO_STATUS_WIDGET}.${actionKey}`);
-      if (actionKey === DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT) {
-        return identifyDevice(gladys, params.device, config);
-      }
-      // Throwing acks the action as failed: the message reaches the user.
-      throw new Error(`Unknown widget action: ${actionKey}`);
-    },
-  },
-};
+function energyFlowContent(view) {
+  const { device, snapshot, components: has } = view;
+  const ref = (key) => `${device.external_id}:${key}`;
+  const exists = new Set(device.features.map((f) => f.external_id));
+  const tile = (key, label, icon) =>
+    exists.has(ref(key)) ? { type: 'value', label, icon, device_feature: ref(key) } : null;
+  const tiles = [
+    tile(SITE_FEATURES.SOLAR_POWER, { en: 'Solar', fr: 'Solaire' }, 'sun'),
+    tile(SITE_FEATURES.HOME_POWER, { en: 'Home', fr: 'Maison' }, 'home'),
+    tile(SITE_FEATURES.GRID_POWER, { en: 'Grid', fr: 'Réseau' }, 'activity'),
+    tile(SITE_FEATURES.BATTERY_LEVEL, { en: 'Powerwall', fr: 'Powerwall' }, 'battery'),
+    tile(SITE_FEATURES.BATTERY_CHARGE_POWER, { en: 'Charging', fr: 'Charge' }, 'battery-charging'),
+    tile(SITE_FEATURES.BATTERY_DISCHARGE_POWER, { en: 'Discharging', fr: 'Décharge' }, 'zap'),
+  ].filter(Boolean);
+  const series = [SITE_FEATURES.SOLAR_POWER, SITE_FEATURES.HOME_POWER, SITE_FEATURES.GRID_POWER]
+    .map(ref)
+    .filter((id) => exists.has(id));
+  const items = [gridRow(snapshot)];
+  if (has.battery) {
+    const mode = OPERATION_MODE_LABELS[snapshot.operationMode];
+    items.push(
+      {
+        label: both('operationMode'),
+        icon: 'sliders',
+        value: mode ? both(mode) : '—',
+        color: WIDGET_COLORS.NEUTRAL,
+      },
+      {
+        label: { en: 'Backup reserve', fr: 'Réserve de secours' },
+        icon: 'shield',
+        value: percent(snapshot.backupReserve),
+        color: WIDGET_COLORS.NEUTRAL,
+      },
+    );
+    if (snapshot.stormModeActive) {
+      items.push({
+        label: { en: 'Storm Watch', fr: 'Alerte tempête' },
+        icon: 'cloud-lightning',
+        value: { en: 'Active', fr: 'Active' },
+        color: WIDGET_COLORS.WARNING,
+      });
+    }
+  }
+  const components = [...tiles];
+  if (series.length) {
+    components.push({
+      type: 'chart',
+      chart_type: 'line',
+      interval: 'last-day',
+      title: { en: 'Last 24 hours', fr: 'Dernières 24 heures' },
+      device_features: series,
+    });
+  }
+  components.push({ type: 'status', items });
+  return { ttl_seconds: 300, components };
+}
 
 /**
- * Freshness nudge: ask the core to re-pull every widget NOW instead of
- * waiting for the content TTL. Call it when you KNOW a computed content
- * changed (here: the config, which drives the plug transport and the observed
- * location) — and after every (re)connection, since the nudges are
- * fire-and-forget: rate-limited core-side to 1 per 10 s per widget, dropped
- * silently while disconnected.
+ * Widgets, keyed like the manifest. `tesla` is the runtime (src/tesla.js).
  */
-export function refreshWidgets(gladys) {
-  for (const key of Object.keys(WIDGETS)) {
-    gladys.requestWidgetRefresh(key);
-  }
+export function createWidgets(tesla) {
+  return {
+    [WIDGET_KEYS.VEHICLE]: {
+      async get({ settings }) {
+        const view = settings?.device ? tesla.vehicleView(settings.device) : null;
+        if (!view) {
+          return message(
+            settings?.device
+              ? {
+                  en: 'This device is not a Tesla vehicle.',
+                  fr: "Cet appareil n'est pas un véhicule Tesla.",
+                }
+              : pickDevice,
+          );
+        }
+        return vehicleContent(view);
+      },
+      async action({ actionKey, settings }) {
+        const order = VEHICLE_ACTIONS[actionKey];
+        if (!order) throw new Error(`Unknown action: ${actionKey}`);
+        const [feature, value, toast] = order;
+        await tesla.vehicleOrder(settings.device, feature, value);
+        return toast;
+      },
+    },
+    [WIDGET_KEYS.ENERGY_FLOW]: {
+      async get({ settings }) {
+        const view = settings?.device ? tesla.siteView(settings.device) : null;
+        if (!view) {
+          return message(
+            settings?.device
+              ? {
+                  en: 'This device is not a Tesla energy site.',
+                  fr: "Cet appareil n'est pas un site d'énergie Tesla.",
+                }
+              : pickDevice,
+          );
+        }
+        return energyFlowContent(view);
+      },
+    },
+  };
 }

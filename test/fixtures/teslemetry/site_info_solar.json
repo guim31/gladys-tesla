@@ -1,0 +1,19 @@
+{
+  "response": {
+    "id": "STE20210301-00003",
+    "site_name": "Barn solar",
+    "installation_date": "2021-03-01T00:00:00-07:00",
+    "components": {
+      "solar": true,
+      "solar_type": "pv_panel",
+      "battery": false,
+      "grid": true,
+      "backup": false,
+      "load_meter": true,
+      "tou_capable": false,
+      "storm_mode_capable": false
+    },
+    "version": "",
+    "installation_time_zone": "America/Denver"
+  }
+}

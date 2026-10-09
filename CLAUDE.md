@@ -133,6 +133,27 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   plus (un widget, si) : prévoir un champ de config `language` si des textes partent du
   conteneur. Le superviseur injecte `TZ`, le fuseau de Gladys. La sandbox est limitée à 256 Mo.
 
+- **Énergie : seuls les index de consommation sont dérivés pour une intégration externe.**
+  `getDiscoveredDevices` n'ajoute la consommation 30 min et son coût qu'aux
+  `ENERGY_INDEX_FEATURE_TYPES` (`energy-sensor/index`, `energy-sensor/energy`, `switch/energy`,
+  téléinfo). Un `energy-production-sensor/index` est publié et historisé, mais le cœur n'en
+  dérive pas la production 30 min (le `energy_parent_id` exigé est un id de base, inconnu du
+  conteneur). L'index de consommation est rattaché par défaut au compteur principal : le dire
+  dans la doc quand l'appareil mesure toute la maison (sinon double comptage avec un Linky).
+- **`battery-storage` n'a pas de puissance signée** : `charge-power` et `discharge-power`, toutes
+  deux ≥ 0. Une puissance signée (Powerwall, onduleurs hybrides) se répartit sur les deux.
+  `grid-sensor/power`, lui, est signé (soutirage +, injection −).
+- **Session de charge d'un véhicule** : `charging-station/charging-state` (énumération OCPP
+  0 en charge, 1 véhicule connecté, 2 pause véhicule, 3 pause borne, 4 inactif) est traduit par
+  le front et convient aussi à une voiture ; `electrical-vehicle-*` n'a pas d'état de charge.
+- **Unités et appareil déjà créé** : quand un réglage change l'unité publiée (km ↔ miles), le
+  cœur garde l'ancienne unité jusqu'au « Mettre à jour ». Publier les valeurs dans l'unité de
+  la fonctionnalité **créée** (`gladys.devices`), pas dans celle de la prochaine découverte.
+- **`onSetValue` est acquitté sous 5 s.** Une commande cloud qui réveille d'abord l'appareil
+  (voiture endormie : 10 à 30 s) dépasse : acquitter à ~4 s et laisser la commande finir en
+  arrière-plan, l'état part quand elle aboutit. Les actions de widget et de scène ont leur propre
+  délai (`action_timeout_seconds`, `timeout_seconds`).
+
 **Formulaires de configuration et actions**
 
 - Les champs `number` sont rendus **sans `step`** : le navigateur n'accepte alors que `min + k`.
@@ -164,6 +185,22 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
+
+## SDK et tests
+
+- Le SDK **publié 0.14.0** n'a ni `publishChangedStates` ni `forgetPublishedStates` ni le module
+  `@gladysassistant/integration-sdk/testing`, que le README de `master` documente : vérifier
+  dans `node_modules` avant de s'en servir, sinon dédupliquer soi-même.
+- `node --test` annule un test (« Promise resolution is still pending but the event loop has
+  already resolved ») si la seule chose qui fait attendre est un minuteur `unref()` : ne pas
+  `unref` un minuteur que le code attend, ou piloter le temps avec `t.mock.timers`.
+- **Docker Hub limite les pulls anonymes** : les runners GitHub partagent leurs IP, et le job
+  « Docker build » échoue en `429 Too Many Requests` sur `FROM node:24-alpine`, avant toute étape
+  de build. Le `Dockerfile` tire donc l'image officielle depuis son miroir ECR Public
+  (`public.ecr.aws/docker/library/node:24-alpine`, même image). Un 429 sur un run déjà passé ne se
+  corrige pas autrement : le prochain push relance la CI.
+- Le proxy des sessions de code refuse aussi `teslemetry.com` et `api.teslemetry.com` : ni la
+  doc ni les tarifs ne se lisent directement, seulement via la recherche web.
 
 ## Store
 

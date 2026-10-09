@@ -1,33 +1,62 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeConfig, DEFAULT_CONFIG } from '../src/config.js';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DEFAULT_CONFIG, normalizeConfig, vehicleRefreshMs } from '../src/config.js';
+import { createStore } from '../src/store.js';
+import { vehicleUnits } from '../src/units.js';
 
-test('normalizeConfig returns the defaults when called with no argument', () => {
+test('defaults when nothing is configured', () => {
   assert.deepEqual(normalizeConfig(), DEFAULT_CONFIG);
+  assert.deepEqual(normalizeConfig(undefined), DEFAULT_CONFIG);
 });
 
-test('normalizeConfig keeps user values over the defaults', () => {
-  const config = normalizeConfig({ latitude: 45.5, longitude: -73.6, unit: 'fahrenheit' });
-  assert.equal(config.latitude, 45.5);
-  assert.equal(config.longitude, -73.6);
-  assert.equal(config.unit, 'fahrenheit');
+test('a pasted token is cleaned, unknown choices fall back', () => {
+  const config = normalizeConfig({
+    access_token: '  Bearer abc123\n',
+    units: 'furlongs',
+    language: 'de',
+    vehicle_refresh_minutes: 7,
+  });
+  assert.equal(config.access_token, 'abc123');
+  assert.equal(config.units, 'auto');
+  assert.equal(config.language, 'en');
+  assert.equal(config.vehicle_refresh_minutes, '30');
+  assert.equal(vehicleRefreshMs(normalizeConfig({ vehicle_refresh_minutes: 60 })), 60 * 60 * 1000);
+  // 15 minutes was withdrawn (it may keep a car awake): an old value becomes 30.
+  assert.equal(normalizeConfig({ vehicle_refresh_minutes: '15' }).vehicle_refresh_minutes, '30');
+  assert.equal(vehicleRefreshMs(normalizeConfig({ vehicle_refresh_minutes: '0' })), 0);
 });
 
-test('normalizeConfig coerces numeric strings coming from a form', () => {
-  const config = normalizeConfig({ latitude: '48.8', longitude: '2.3', poll_frequency: '600' });
-  assert.equal(config.latitude, 48.8);
-  assert.equal(config.longitude, 2.3);
-  assert.equal(config.poll_frequency, 600);
-  assert.equal(typeof config.poll_frequency, 'number');
+test('auto units follow the car display, distance and temperature apart', () => {
+  // A UK car: miles and °C.
+  assert.deepEqual(vehicleUnits('auto', { distanceUnit: 'mi', temperatureUnit: 'C' }), {
+    distance: 'mile',
+    temperature: 'celsius',
+  });
+  assert.deepEqual(vehicleUnits('auto', {}), { distance: 'km', temperature: 'celsius' });
+  assert.deepEqual(vehicleUnits('imperial', { distanceUnit: 'km' }), {
+    distance: 'mile',
+    temperature: 'fahrenheit',
+  });
 });
 
-test('normalizeConfig falls back to the default for a missing numeric field', () => {
-  const config = normalizeConfig({ unit: 'celsius' });
-  assert.equal(config.poll_frequency, DEFAULT_CONFIG.poll_frequency);
-});
-
-test('GLADYS_PREFER_LOCAL defaults to true and only an explicit false disables it', () => {
-  assert.equal(normalizeConfig().GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: true }).GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: false }).GLADYS_PREFER_LOCAL, false);
+test('the store survives a restart and ignores a corrupt file', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'gladys-tesla-'));
+  try {
+    const store = createStore({ dir });
+    await store.load();
+    store.data.sites[1] = { gridConnected: true };
+    await store.flush();
+    const again = createStore({ dir });
+    assert.deepEqual((await again.load()).sites, { 1: { gridConnected: true } });
+    // No temporary file left behind.
+    await assert.rejects(readFile(join(dir, 'tesla-state.json.tmp')));
+    const { writeFile } = await import('node:fs/promises');
+    await writeFile(join(dir, 'tesla-state.json'), '{not json');
+    assert.deepEqual((await createStore({ dir }).load()).sites, {});
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });

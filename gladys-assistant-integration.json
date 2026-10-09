@@ -1,177 +1,345 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Tesla",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Tesla cars, Powerwall and solar through Teslemetry: charging, climate, locks, energy flows.",
+    "fr": "Voitures Tesla, Powerwall et solaire via Teslemetry : charge, clim, verrous, flux d'énergie."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-tesla:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-tesla/main/cover.png",
+  "categories": ["energy"],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": { "en": "Before you start", "fr": "Avant de commencer" },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "This integration reaches your Tesla account through Teslemetry, a paid service that relays the official Tesla Fleet API (no Tesla developer account needed). Create a Teslemetry account, link your Tesla account, add the virtual key to your car, then create an access token in the Teslemetry console and paste it below. Reading data never wakes your car; a command sent to a sleeping car wakes it.",
+        "fr": "Cette intégration accède à votre compte Tesla via Teslemetry, un service payant qui relaie l'API Fleet officielle de Tesla (pas de compte développeur Tesla nécessaire). Créez un compte Teslemetry, liez votre compte Tesla, ajoutez la clé virtuelle à votre voiture, puis créez un jeton d'accès dans la console Teslemetry et collez-le ci-dessous. La lecture des données ne réveille jamais la voiture ; une commande envoyée à une voiture endormie la réveille."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://teslemetry.com",
+          "label": { "en": "Teslemetry", "fr": "Teslemetry" }
+        },
+        {
+          "url": "https://teslemetry.com/pricing",
+          "label": { "en": "Teslemetry pricing", "fr": "Tarifs Teslemetry" }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
+      "key": "access_token",
+      "type": "secret",
+      "label": { "en": "Teslemetry access token", "fr": "Jeton d'accès Teslemetry" },
       "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+        "en": "Created in the Teslemetry console, with access to your vehicles and energy sites.",
+        "fr": "Créé dans la console Teslemetry, avec l'accès à vos véhicules et sites d'énergie."
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
+      "key": "units",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": { "en": "Units", "fr": "Unités" },
+      "description": {
+        "en": "Units of the vehicle values (distances, temperatures), as used by scenes. The dashboard always converts to each user's preference.",
+        "fr": "Unités des valeurs du véhicule (distances, températures), telles que les scènes les comparent. Le tableau de bord convertit toujours selon la préférence de chacun."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "auto",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "auto",
+          "label": {
+            "en": "Same as the car display (miles or km, °F or °C)",
+            "fr": "Comme l'écran de la voiture (miles ou km, °F ou °C)"
+          }
+        },
+        { "value": "imperial", "label": { "en": "Miles and °F", "fr": "Miles et °F" } },
+        { "value": "metric", "label": { "en": "Kilometers and °C", "fr": "Kilomètres et °C" } }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "language",
+      "type": "select",
+      "label": { "en": "Device names language", "fr": "Langue des noms d'appareils" },
       "description": {
-        "en": "How often sensors are polled, in seconds.",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes."
+        "en": "Language of the feature names given to new devices (Gladys keeps a name once the device is created).",
+        "fr": "Langue des noms de fonctionnalités des nouveaux appareils (Gladys garde un nom une fois l'appareil créé)."
       },
       "required": false,
-      "default": 300,
-      "min": 30,
-      "max": 3600
+      "default": "en",
+      "options": [
+        { "value": "en", "label": { "en": "English", "fr": "Anglais" } },
+        { "value": "fr", "label": { "en": "French", "fr": "Français" } }
+      ]
+    },
+    {
+      "key": "vehicle_refresh_minutes",
+      "type": "select",
+      "label": { "en": "Backup refresh of the cars", "fr": "Relevé de secours des voitures" },
+      "description": {
+        "en": "Cars are followed in real time through the Teslemetry stream. When a car is awake but streams nothing (older cars, streaming off), its data is read at this pace. Never while it sleeps.",
+        "fr": "Les voitures sont suivies en temps réel par le flux Teslemetry. Quand une voiture éveillée n'envoie rien (anciens modèles, flux désactivé), ses données sont lues à ce rythme. Jamais pendant qu'elle dort."
+      },
+      "required": false,
+      "default": "30",
+      "options": [
+        { "value": "30", "label": { "en": "Every 30 minutes", "fr": "Toutes les 30 minutes" } },
+        { "value": "60", "label": { "en": "Every hour", "fr": "Toutes les heures" } },
+        { "value": "0", "label": { "en": "Never (stream only)", "fr": "Jamais (flux seul)" } }
+      ]
+    },
+    {
+      "key": "home_energy_index",
+      "type": "boolean",
+      "label": {
+        "en": "Send the home consumption to the energy dashboard",
+        "fr": "Envoyer la consommation de la maison au tableau de bord énergie"
+      },
+      "description": {
+        "en": "Adds a home consumption index (kWh) to each Powerwall site, from which Gladys computes consumption and cost. Gladys attaches it to your main electric meter: leave it off if your utility meter is already in Gladys, or the house is counted twice.",
+        "fr": "Ajoute un index de consommation de la maison (kWh) à chaque site Powerwall, dont Gladys calcule la consommation et le coût. Gladys le rattache à votre compteur électrique principal : laissez-le désactivé si votre compteur (Linky…) est déjà dans Gladys, sinon la maison est comptée deux fois."
+      },
+      "required": false,
+      "default": false
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "test_connection",
+      "label": { "en": "Test the connection", "fr": "Tester la connexion" },
+      "description": {
+        "en": "Lists the vehicles and energy sites Teslemetry gives access to. Free: no car is woken.",
+        "fr": "Liste les véhicules et sites d'énergie accessibles via Teslemetry. Gratuit : aucune voiture n'est réveillée."
+      },
       "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "charging_started",
+      "label": { "en": "Tesla started charging", "fr": "La Tesla a commencé à charger" },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A charging session starts or resumes.",
+        "fr": "Une session de charge démarre ou reprend."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
+          "label": { "en": "Vehicle", "fr": "Véhicule" }
         }
       ],
       "variables": [
         {
-          "key": "target",
-          "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "key": "battery_level",
+          "type": "number",
+          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
+        }
+      ]
+    },
+    {
+      "key": "charging_complete",
+      "label": { "en": "Tesla charging complete", "fr": "Charge de la Tesla terminée" },
+      "description": {
+        "en": "The car reached its charge limit.",
+        "fr": "La voiture a atteint sa limite de charge."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Vehicle", "fr": "Véhicule" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "battery_level",
+          "type": "number",
+          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
+        }
+      ]
+    },
+    {
+      "key": "vehicle_plugged_in",
+      "label": { "en": "Tesla plugged in", "fr": "Tesla branchée" },
+      "description": {
+        "en": "A charging cable was connected to the car.",
+        "fr": "Un câble de charge a été branché sur la voiture."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Vehicle", "fr": "Véhicule" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "battery_level",
+          "type": "number",
+          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
+        }
+      ]
+    },
+    {
+      "key": "vehicle_unplugged",
+      "label": { "en": "Tesla unplugged", "fr": "Tesla débranchée" },
+      "description": {
+        "en": "The charging cable was removed from the car.",
+        "fr": "Le câble de charge a été retiré de la voiture."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Vehicle", "fr": "Véhicule" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "battery_level",
+          "type": "number",
+          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
+        }
+      ]
+    },
+    {
+      "key": "grid_outage",
+      "label": { "en": "Grid outage (Powerwall)", "fr": "Coupure réseau (Powerwall)" },
+      "description": {
+        "en": "The Powerwall gateway lost the grid and the house runs on backup.",
+        "fr": "La passerelle Powerwall a perdu le réseau et la maison passe sur secours."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Energy site", "fr": "Site d'énergie" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "battery_level",
+          "type": "number",
+          "label": { "en": "Powerwall charge (%)", "fr": "Charge du Powerwall (%)" }
+        },
+        {
+          "key": "intentional",
+          "type": "boolean",
+          "label": { "en": "Off-grid on purpose", "fr": "Hors réseau volontaire" }
+        }
+      ]
+    },
+    {
+      "key": "grid_restored",
+      "label": { "en": "Grid restored (Powerwall)", "fr": "Retour du réseau (Powerwall)" },
+      "description": {
+        "en": "The grid is back and the house is connected to it again.",
+        "fr": "Le réseau est revenu et la maison y est reconnectée."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Energy site", "fr": "Site d'énergie" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "battery_level",
+          "type": "number",
+          "label": { "en": "Powerwall charge (%)", "fr": "Charge du Powerwall (%)" }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "set_backup_reserve",
+      "label": { "en": "Set the Powerwall backup reserve", "fr": "Régler la réserve du Powerwall" },
       "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+        "en": "Share of the Powerwall kept for outages, e.g. 100 % before a storm.",
+        "fr": "Part du Powerwall gardée pour les coupures, par exemple 100 % avant une tempête."
       },
-      "timeout_seconds": 15,
+      "timeout_seconds": 30,
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": { "en": "Energy site", "fr": "Site d'énergie" },
           "required": true
+        },
+        {
+          "key": "percent",
+          "type": "number",
+          "label": { "en": "Backup reserve (%)", "fr": "Réserve de secours (%)" },
+          "placeholder": { "en": "e.g. 100", "fr": "ex. 100" },
+          "required": true,
+          "default": 100,
+          "min": 0,
+          "max": 100
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "backup_reserve",
+          "type": "number",
+          "label": { "en": "New backup reserve (%)", "fr": "Nouvelle réserve (%)" }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
+      "key": "vehicle",
+      "label": { "en": "Tesla vehicle", "fr": "Véhicule Tesla" },
       "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+        "en": "Battery, range, charging and climate, with buttons to charge, heat or cool, lock.",
+        "fr": "Batterie, autonomie, charge et clim, avec boutons pour charger, climatiser, verrouiller."
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "icon": "battery-charging",
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Vehicle", "fr": "Véhicule" },
+          "required": true
+        }
+      ],
+      "action_timeout_seconds": 60
+    },
+    {
+      "key": "energy_flow",
+      "label": { "en": "Tesla energy flow", "fr": "Flux d'énergie Tesla" },
+      "description": {
+        "en": "Solar, home, grid and Powerwall in real time, the last 24 hours and the backup state.",
+        "fr": "Solaire, maison, réseau et Powerwall en direct, les dernières 24 h et l'état du secours."
+      },
+      "icon": "sun",
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Energy site", "fr": "Site d'énergie" },
+          "required": true
+        }
+      ]
     }
   ]
 }

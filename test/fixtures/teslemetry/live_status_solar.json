@@ -1,0 +1,10 @@
+{
+  "response": {
+    "solar_power": 3150,
+    "load_power": 980,
+    "grid_power": -2170,
+    "grid_status": "Active",
+    "island_status": "on_grid",
+    "timestamp": "2026-10-01T13:00:00-06:00"
+  }
+}
