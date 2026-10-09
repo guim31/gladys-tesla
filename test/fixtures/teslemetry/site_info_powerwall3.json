@@ -1,0 +1,55 @@
+{
+  "response": {
+    "id": "STE20250601-00002",
+    "site_name": "Cabin",
+    "backup_reserve_percent": 30,
+    "default_real_mode": "autonomous",
+    "installation_date": "2025-06-01T00:00:00-04:00",
+    "components": {
+      "solar": false,
+      "battery": true,
+      "grid": true,
+      "backup": true,
+      "gateway": "teg",
+      "load_meter": true,
+      "tou_capable": true,
+      "storm_mode_capable": true,
+      "battery_type": "ac_powerwall",
+      "configurable": true,
+      "batteries": [
+        {
+          "device_id": "battery-fake-3",
+          "din": "1707000-11-L--TG00000000003",
+          "serial_number": "TG00000000003",
+          "part_number": "1707000-11-L",
+          "part_type": 2,
+          "part_name": "Powerwall 3",
+          "nameplate_max_charge_power": 5000,
+          "nameplate_max_discharge_power": 11500,
+          "nameplate_energy": 13500
+        }
+      ],
+      "gateways": [
+        {
+          "device_id": "gateway-fake-2",
+          "din": "1841000-01-D--GW000000002",
+          "serial_number": "GW000000002",
+          "part_number": "1841000-01-D",
+          "part_type": 10,
+          "part_name": "Tesla Backup Switch",
+          "is_active": true,
+          "site_id": "site-fake-2",
+          "firmware_version": "25.18.1",
+          "updated_datetime": "2026-09-01T00:00:00.000Z"
+        }
+      ]
+    },
+    "version": "25.18.1",
+    "battery_count": 1,
+    "nameplate_power": 11500,
+    "nameplate_energy": 13500,
+    "installation_time_zone": "America/New_York",
+    "max_site_meter_power_ac": 1000000000,
+    "min_site_meter_power_ac": -1000000000
+  }
+}

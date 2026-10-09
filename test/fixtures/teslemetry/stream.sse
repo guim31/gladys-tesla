@@ -1,0 +1,21 @@
+: Teslemetry SSE capture, rebuilt from the wire format of the teslemetry-stream
+: library tests (Apache 2.0). Identifiers are fake.
+
+data: {"vin": "7SAYTEST0FAKE0002", "state": "online", "createdAt": "2026-10-01T22:00:00.000Z", "isCache": true}
+
+data: {"vin": "7SAYTEST0FAKE0002", "createdAt": "2026-10-01T22:00:05.120Z", "data": {"BatteryLevel": 54.2, "RatedRange": 167.35, "DetailedChargeState": "DetailedChargeStateCharging", "ACChargingPower": 11.2, "DCChargingPower": 0, "ChargeLimitSoc": 80, "ChargeCurrentRequest": 48, "ChargeCurrentRequestMax": 48, "HvacPower": "HvacPowerStateOff", "InsideTemp": 21.4, "OutsideTemp": 4.5, "HvacLeftTemperatureRequest": 21.5, "Locked": true, "SentryMode": "SentryModeStateArmed", "Odometer": 18342.77, "SettingDistanceUnit": "DistanceUnitMiles", "SettingTemperatureUnit": "TemperatureUnitFahrenheit"}}
+
+data: {"vin": "7SAYTEST0FAKE0002", "createdAt": "2026-10-01T23:10:05.120Z", "data": {"BatteryLevel": "79.6", "RatedRange": "246.1"}}
+
+data: {"vin": "7SAYTEST0FAKE0002", "createdAt": "2026-10-01T23:12:41.512Z", "data": {"DetailedChargeState": "DetailedChargeStateComplete", "BatteryLevel": 80.0}}
+
+data: {"site_id": 200001, "createdAt": "2026-10-01T22:00:01.000Z", "isCache": true, "live_status": {"solar_power": 0, "percentage_charged": 88.2, "backup_capable": true, "battery_power": 1850, "load_power": 2120, "grid_status": "Active", "grid_services_active": false, "grid_power": 270, "grid_services_power": 0, "generator_power": 0, "island_status": "on_grid", "storm_mode_active": false, "timestamp": "2026-10-01T15:00:00-07:00"}}
+
+data: {"site_id": "200001", "createdAt": "2026-10-01T22:00:02.000Z", "isCache": true, "date": "2026-10-01", "totals": {"solar_energy_exported": 31250.0, "grid_energy_imported": 2180.0, "battery_energy_exported": 6400.0, "total_home_usage": 18900.0, "total_battery_charge": 9800.0, "total_battery_discharge": 6400.0, "total_solar_generation": 31250.0, "total_grid_energy_exported": 10010.0}}
+
+data: {"site_id": 200001, "createdAt": "2026-10-01T23:30:00.000Z", "live_status": {"solar_power": 0, "percentage_charged": 80.1, "battery_power": 0, "load_power": 640, "grid_status": "Inactive", "grid_power": 0, "island_status": "off_grid_unintentional", "storm_mode_active": false, "timestamp": "2026-10-01T16:30:00-07:00"}}
+
+data: {"site_id": 200001, "createdAt": "2026-10-02T07:05:00.000Z", "date": "2026-10-02", "totals": {"grid_energy_imported": 410.0, "total_home_usage": 1020.0, "total_battery_charge": 0.0, "total_battery_discharge": 610.0, "total_solar_generation": 0.0, "total_grid_energy_exported": 0.0}}
+
+data: {"credits": {"type": "command", "cost": 1, "name": "charge_stop", "balance": 498, "quota": {}}, "createdAt": "2026-10-02T07:06:00.000Z"}
+

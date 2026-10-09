@@ -12,28 +12,20 @@ the notes of the version's GitHub Release.
 
 ### Added
 
-- A working example of scene triggers, scene actions and dashboard widgets
-  (Gladys 5.1.0 or later).
-- `CHANGELOG.md`, rolled by the Release workflow.
-- A GitHub Release for every version, with its changelog section as notes: the
-  Gladys Supervision page links each version to the repository's releases.
-- CI runs the tests on Node 22 and 24, and builds the Docker image.
-- Dependabot keeps the npm dependencies and the GitHub Actions up to date.
-- `SECURITY.md` (how to report a vulnerability) and `CLAUDE.md` (project rules
-  for contributors and coding assistants).
-- Manifest tests: `version` matches `package.json`, `docker_image` is tagged
-  with it, descriptions hold 10 to 100 characters, placeholders are
-  multi-language objects.
-- The latitude and longitude fields show an example value as placeholder.
+- Tesla vehicles through Teslemetry: battery level, range, charging state and
+  power, charge limit and charging current (adjustable), start / stop charging,
+  plugged in, climate on / off and set temperature, inside and outside
+  temperatures, lock / unlock, Sentry Mode, odometer, online or asleep. Units
+  follow the car's display (miles / °F or km / °C) unless set otherwise.
+- Tesla energy sites (Powerwall, solar): solar production, home consumption,
+  signed grid power, battery charging and discharging, Powerwall charge, grid
+  presence, operation mode (adjustable) and cumulative kWh indexes; the home
+  consumption index feeds the Gladys energy dashboard.
+- Real-time updates through the Teslemetry stream; reading never wakes a car.
+- Dashboard widgets: _Tesla vehicle_ and _Tesla energy flow_.
+- Scene triggers: charging started, charging complete, plugged in, unplugged,
+  grid outage, grid restored. Scene action: set the Powerwall backup reserve.
+- A _Test the connection_ action, showing the vehicles, energy sites, stream
+  status and Teslemetry credit balance.
 
-### Changed
-
-- Node.js 22 or later is required (Node 20 is end-of-life).
-
-### Fixed
-
-- The release commit no longer fails `npm run format:check`: the Release
-  workflow updates the manifest `version` and `docker_image` in place instead
-  of re-printing the whole file with `jq`.
-
-[Unreleased]: https://github.com/GladysAssistant/integration-template-js/commits/main
+[Unreleased]: https://github.com/guim31/gladys-tesla/commits/main
