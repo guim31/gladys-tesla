@@ -194,6 +194,11 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - `node --test` annule un test (« Promise resolution is still pending but the event loop has
   already resolved ») si la seule chose qui fait attendre est un minuteur `unref()` : ne pas
   `unref` un minuteur que le code attend, ou piloter le temps avec `t.mock.timers`.
+- **Docker Hub limite les pulls anonymes** : les runners GitHub partagent leurs IP, et le job
+  « Docker build » échoue en `429 Too Many Requests` sur `FROM node:24-alpine`, avant toute étape
+  de build. Le `Dockerfile` tire donc l'image officielle depuis son miroir ECR Public
+  (`public.ecr.aws/docker/library/node:24-alpine`, même image). Un 429 sur un run déjà passé ne se
+  corrige pas autrement : le prochain push relance la CI.
 - Le proxy des sessions de code refuse aussi `teslemetry.com` et `api.teslemetry.com` : ni la
   doc ni les tarifs ne se lisent directement, seulement via la recherche web.
 
