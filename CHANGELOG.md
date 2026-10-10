@@ -10,6 +10,24 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Tesla Wall Connector gen 3, read locally on the home network, without
+  Teslemetry and without a subscription: connector and charging state, status,
+  charging power, session energy, a total energy index for the Gladys energy
+  dashboard, grid voltage, vehicle current and handle temperature. One device
+  per charger, identified by its serial number.
+- A _Wall Connector addresses_ setting and a _Test the Wall Connectors_ action.
+- A _Tesla Wall Connector_ dashboard widget.
+- Wall Connector scene triggers, with the session energy: _car plugged in_,
+  _car unplugged_, _started charging_, _charging finished_. The car triggers
+  are unchanged.
+
+### Changed
+
+- The Teslemetry access token is optional: with only Wall Connectors
+  configured, the integration publishes only them.
+
 ## [1.0.1] - 2026-10-09
 
 ### Added
