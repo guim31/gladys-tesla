@@ -45,16 +45,6 @@ const TEXTS = {
   modeSelfConsumption: { en: 'Self-Powered', fr: 'Autoconsommation' },
   modeAutonomous: { en: 'Time-Based Control', fr: 'Contrôle horaire' },
   modeBackup: { en: 'Backup-only', fr: 'Secours uniquement' },
-  // Wall Connector features
-  wcConnectorStatus: { en: 'Connector', fr: 'Connecteur' },
-  wcChargingState: { en: 'Charging state', fr: 'État de charge' },
-  wcStatus: { en: 'Status', fr: 'Statut' },
-  wcPower: { en: 'Charging power', fr: 'Puissance de charge' },
-  wcSessionEnergy: { en: 'Session energy', fr: 'Énergie de la session' },
-  wcEnergy: { en: 'Total energy delivered', fr: 'Énergie totale délivrée' },
-  wcVoltage: { en: 'Grid voltage', fr: 'Tension du réseau' },
-  wcCurrent: { en: 'Vehicle current', fr: 'Courant du véhicule' },
-  wcHandleTemperature: { en: 'Handle temperature', fr: 'Température de la poignée' },
   // Device name fallbacks
   energySite: { en: 'Tesla energy site', fr: 'Site énergie Tesla' },
 };

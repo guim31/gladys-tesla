@@ -15,7 +15,7 @@ export const DEFAULT_DATA_DIR = process.env.DATA_DIR || '/data';
 
 export function createStore({ dir = DEFAULT_DATA_DIR, debounceMs = 5000, logger } = {}) {
   const file = join(dir, 'tesla-state.json');
-  let data = { version: 1, vehicles: {}, sites: {}, wallConnectors: {} };
+  let data = { version: 1, vehicles: {}, sites: {} };
   let timer = null;
   let writing = Promise.resolve();
 
@@ -23,7 +23,7 @@ export function createStore({ dir = DEFAULT_DATA_DIR, debounceMs = 5000, logger 
     try {
       const parsed = JSON.parse(await readFile(file, 'utf8'));
       if (parsed && parsed.version === 1) {
-        data = { version: 1, vehicles: {}, sites: {}, wallConnectors: {}, ...parsed };
+        data = { version: 1, vehicles: {}, sites: {}, ...parsed };
       }
     } catch (err) {
       if (err.code !== 'ENOENT') logger?.warn(`Ignoring unreadable ${file}: ${err.message}`);

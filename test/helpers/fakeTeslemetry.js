@@ -121,9 +121,7 @@ export function createFakeStreamFactory() {
 
 /** In-memory store with the API of src/store.js. */
 export function createMemoryStore(initial) {
-  let data = structuredClone(
-    initial ?? { version: 1, vehicles: {}, sites: {}, wallConnectors: {} },
-  );
+  let data = structuredClone(initial ?? { version: 1, vehicles: {}, sites: {} });
   return {
     get data() {
       return data;

@@ -13,10 +13,6 @@ export const SCENE_TRIGGERS = {
   VEHICLE_UNPLUGGED: 'vehicle_unplugged',
   GRID_OUTAGE: 'grid_outage',
   GRID_RESTORED: 'grid_restored',
-  WALL_CONNECTOR_PLUGGED: 'wall_connector_plugged',
-  WALL_CONNECTOR_UNPLUGGED: 'wall_connector_unplugged',
-  WALL_CONNECTOR_CHARGING_STARTED: 'wall_connector_charging_started',
-  WALL_CONNECTOR_CHARGING_FINISHED: 'wall_connector_charging_finished',
 };
 
 export const SCENE_TRIGGER_KEYS = Object.values(SCENE_TRIGGERS);
@@ -38,26 +34,6 @@ export function vehicleTransitions(previous, next) {
     if (before === 'Disconnected') events.push(SCENE_TRIGGERS.VEHICLE_PLUGGED_IN);
     if (after === 'Disconnected') events.push(SCENE_TRIGGERS.VEHICLE_UNPLUGGED);
   }
-  return events;
-}
-
-/**
- * Wall Connector triggers between two charge session states (see
- * `sessionState` in src/devices/wallConnector.js), in the order things happen:
- * plugged in, then charging.
- * @returns {string[]} trigger keys
- */
-export function wallConnectorTransitions(previous, next) {
-  const before = previous.sessionState;
-  const after = next.sessionState;
-  const events = [];
-  if (!before || !after || before === after) return events;
-  if (before === 'Disconnected') events.push(SCENE_TRIGGERS.WALL_CONNECTOR_PLUGGED);
-  if (after === 'Charging') events.push(SCENE_TRIGGERS.WALL_CONNECTOR_CHARGING_STARTED);
-  if (after === 'Complete' && before !== 'Disconnected') {
-    events.push(SCENE_TRIGGERS.WALL_CONNECTOR_CHARGING_FINISHED);
-  }
-  if (after === 'Disconnected') events.push(SCENE_TRIGGERS.WALL_CONNECTOR_UNPLUGGED);
   return events;
 }
 

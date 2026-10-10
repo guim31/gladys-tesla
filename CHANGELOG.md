@@ -10,6 +10,22 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- The integration is now named **Teslemetry**, after the service it goes
+  through (other Tesla services may get their own integration). The devices,
+  their history, scenes and dashboards are unchanged.
+- The Teslemetry access token is required again.
+
+### Removed
+
+- The Tesla Wall Connector, which moves to its own integration, **Tesla Wall
+  Connector** (same device ids): the _Wall Connector addresses_ setting, the
+  _Test the Wall Connectors_ action, the _Tesla Wall Connector_ widget and the
+  four _Wall Connector_ scene triggers. A charger set up in 1.1.0 brings a
+  reminder in the logs and the connection status for 30 days; its device is
+  left alone.
+
 ## [1.1.0] - 2026-10-10
 
 ### Added

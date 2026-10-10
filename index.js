@@ -36,7 +36,6 @@ gladys.onDeviceCreated((device) => tesla.deviceCreated(device));
 gladys.onDeviceUpdated((device) => tesla.deviceCreated(device));
 
 gladys.onAction('test_connection', () => tesla.testConnection());
-gladys.onAction('test_wall_connector', () => tesla.testWallConnectors());
 
 for (const [key, handler] of Object.entries(createSceneActions(tesla))) {
   gladys.onSceneAction(key, (fields) => handler({ fields }));
@@ -82,7 +81,7 @@ gladys.handleShutdown(async (signal) => {
   await tesla.stop();
 });
 
-logger.info('Starting the Tesla integration (Teslemetry, Wall Connector)...');
+logger.info('Starting the Teslemetry integration...');
 gladys.connect().catch((err) => {
   logger.error('Initial connection failed', err);
   process.exit(1);
