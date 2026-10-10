@@ -6,8 +6,8 @@
     "en": "Tesla cars, Powerwall and solar via Teslemetry, plus the Wall Connector read locally.",
     "fr": "Voitures Tesla, Powerwall et solaire via Teslemetry, et la borne Wall Connector en local."
   },
-  "version": "1.0.1",
-  "docker_image": "ghcr.io/guim31/gladys-tesla:1.0.1",
+  "version": "1.1.0",
+  "docker_image": "ghcr.io/guim31/gladys-tesla:1.1.0",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/guim31/gladys-tesla/main/cover.png",
   "categories": ["energy"],
