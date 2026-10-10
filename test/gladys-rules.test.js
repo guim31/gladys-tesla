@@ -3,7 +3,6 @@
 //
 // Every device the integration discovers from realistic fixtures — Model 3 /
 // Y / S / X, Powerwall 2 with solar, Powerwall 3 without, a solar-only site —
-// and two Wall Connectors (three-phase Europe, split-phase North America) —
 // is checked against test/fixtures/gladys-feature-table.json, a table taken
 // from the Gladys core code. Do not relax this test to make it pass: fix the
 // integration.
@@ -21,7 +20,6 @@ import {
   createFakeStreamFactory,
   createMemoryStore,
 } from './helpers/fakeTeslemetry.js';
-import { WC_HOSTS, createFakeWallNetwork } from './helpers/fakeWallConnector.js';
 
 const table = JSON.parse(
   await readFile(new URL('./fixtures/gladys-feature-table.json', import.meta.url), 'utf8'),
@@ -36,46 +34,33 @@ async function discover(configOverrides) {
     logger: silent,
     clientFactory: () => createFakeClient(),
     streamFactory: createFakeStreamFactory(),
-    wallClientFactory: createFakeWallNetwork().factory,
   });
-  await tesla.start(
-    normalizeConfig({
-      access_token: 'test-token',
-      wall_connectors: `${WC_HOSTS.EU}, ${WC_HOSTS.NA}`,
-      ...configOverrides,
-    }),
-  );
+  await tesla.start(normalizeConfig({ access_token: 'test-token', ...configOverrides }));
   await tesla.stop();
   return gladys.discovered;
 }
-
-const TESLEMETRY_MODELS = [
-  'Model 3',
-  'Model S',
-  'Model X',
-  'Model Y',
-  'Powerwall 2',
-  'Powerwall 3',
-  'Solar',
-];
-const WALL_CONNECTORS = ['Wall Connector (Gen 3)', 'Wall Connector (Gen 3)'];
 
 const CONFIGS = [
   { units: 'auto', language: 'en' },
   { units: 'metric', language: 'fr' },
   { units: 'imperial', language: 'en', home_energy_index: true },
-  // Wall Connectors only, no Teslemetry token.
-  { units: 'auto', language: 'fr', access_token: '' },
 ];
 
 for (const config of CONFIGS) {
-  const label = `${config.units}/${config.language}${config.access_token === '' ? '/local' : ''}`;
+  const label = `${config.units}/${config.language}`;
   const devices = await discover(config);
 
   test(`[${label}] every model of the fixtures is discovered`, () => {
     const models = devices.map((d) => d.model).sort();
-    const expected = config.access_token === '' ? [] : TESLEMETRY_MODELS;
-    assert.deepEqual(models, [...expected, ...WALL_CONNECTORS].sort());
+    assert.deepEqual(models, [
+      'Model 3',
+      'Model S',
+      'Model X',
+      'Model Y',
+      'Powerwall 2',
+      'Powerwall 3',
+      'Solar',
+    ]);
   });
 
   for (const device of devices) {

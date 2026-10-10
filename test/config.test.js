@@ -8,8 +8,15 @@ import { createStore } from '../src/store.js';
 import { vehicleUnits } from '../src/units.js';
 
 test('defaults when nothing is configured', () => {
-  assert.deepEqual(normalizeConfig(), DEFAULT_CONFIG);
-  assert.deepEqual(normalizeConfig(undefined), DEFAULT_CONFIG);
+  const expected = { ...DEFAULT_CONFIG, wall_connectors_moved: false };
+  assert.deepEqual(normalizeConfig(), expected);
+  assert.deepEqual(normalizeConfig(undefined), expected);
+});
+
+test('Wall Connector addresses left over from 1.1.0 are only noticed', () => {
+  assert.equal(normalizeConfig({ wall_connectors: '192.0.2.10' }).wall_connectors_moved, true);
+  assert.equal(normalizeConfig({ wall_connectors: '  ' }).wall_connectors_moved, false);
+  assert.equal(normalizeConfig({ wall_connectors: '192.0.2.10' }).wall_connectors, undefined);
 });
 
 test('a pasted token is cleaned, unknown choices fall back', () => {

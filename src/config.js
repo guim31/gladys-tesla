@@ -4,8 +4,6 @@
 // so the rest of the code never deals with `undefined` or form strings.
 // -----------------------------------------------------------------------------
 
-import { parseHosts } from './wallConnector/client.js';
-
 export const UNIT_SYSTEMS = { AUTO: 'auto', METRIC: 'metric', IMPERIAL: 'imperial' };
 export const LANGUAGES = ['en', 'fr'];
 // Minutes between two fallback vehicle_data reads ('0' = streaming only).
@@ -19,7 +17,6 @@ export const DEFAULT_CONFIG = {
   language: 'en',
   vehicle_refresh_minutes: '30',
   home_energy_index: false,
-  wall_connectors: '',
 };
 
 /**
@@ -37,7 +34,9 @@ export function normalizeConfig(raw = {}) {
     language: LANGUAGES.includes(config.language) ? config.language : DEFAULT_CONFIG.language,
     vehicle_refresh_minutes: normalizeRefresh(config.vehicle_refresh_minutes),
     home_energy_index: config.home_energy_index === true || config.home_energy_index === 'true',
-    wall_connectors: String(config.wall_connectors ?? ''),
+    // Left over from 1.1.0, where the Wall Connector was read here: it now has
+    // its own integration (see src/tesla.js).
+    wall_connectors_moved: String(raw.wall_connectors ?? '').trim() !== '',
   };
 }
 
@@ -45,11 +44,6 @@ export function normalizeConfig(raw = {}) {
 function normalizeRefresh(value) {
   const choice = String(value);
   return VEHICLE_REFRESH_CHOICES.includes(choice) ? choice : DEFAULT_CONFIG.vehicle_refresh_minutes;
-}
-
-/** Wall Connector addresses of the configuration (invalid entries dropped). */
-export function wallConnectorHosts(config) {
-  return parseHosts(config?.wall_connectors);
 }
 
 /** Fallback refresh period in milliseconds, 0 when disabled. */

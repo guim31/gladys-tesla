@@ -16,7 +16,6 @@ export function createFakeGladys({ selector = 'tesla' } = {}) {
     connectionStatuses: [],
     sceneEvents: [],
     widgetRefreshes: [],
-    transports: [],
     publishCalls: 0,
     devices: [],
 
@@ -38,10 +37,6 @@ export function createFakeGladys({ selector = 'tesla' } = {}) {
           state: s.state ?? { text: s.text },
         });
       }
-    },
-
-    async publishTransports(entries) {
-      fake.transports.push(...structuredClone(entries));
     },
 
     async setConnectionStatus(connected, message) {

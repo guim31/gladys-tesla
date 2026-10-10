@@ -1,28 +1,31 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Tesla",
+  "name": "Teslemetry",
   "description": {
-    "en": "Tesla cars, Powerwall and solar via Teslemetry, plus the Wall Connector read locally.",
-    "fr": "Voitures Tesla, Powerwall et solaire via Teslemetry, et la borne Wall Connector en local."
+    "en": "Tesla cars and Powerwall through Teslemetry: charging, climate, locks, solar, energy flows.",
+    "fr": "Voitures Tesla et Powerwall via Teslemetry : charge, clim, verrous, solaire, flux d'énergie."
   },
   "version": "1.1.0",
   "docker_image": "ghcr.io/guim31/gladys-tesla:1.1.0",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/guim31/gladys-tesla/main/cover.png",
   "categories": ["energy"],
-  "transports": ["local", "cloud"],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
       "label": { "en": "Before you start", "fr": "Avant de commencer" },
       "description": {
-        "en": "Cars, Powerwall and solar: this integration reaches your Tesla account through Teslemetry, a paid service that relays the official Tesla Fleet API (no Tesla developer account needed). Create a Teslemetry account, link your Tesla account, add the virtual key to your car, then create an access token in the Teslemetry console and paste it below. Reading data never wakes your car; a command sent to a sleeping car wakes it.\nWall Connector (gen 3): read directly on your home network, no Teslemetry and no subscription needed. Enter its IP address below; the token can then stay empty.",
-        "fr": "Voitures, Powerwall et solaire : cette intégration accède à votre compte Tesla via Teslemetry, un service payant qui relaie l'API Fleet officielle de Tesla (pas de compte développeur Tesla nécessaire). Créez un compte Teslemetry, liez votre compte Tesla, ajoutez la clé virtuelle à votre voiture, puis créez un jeton d'accès dans la console Teslemetry et collez-le ci-dessous. La lecture des données ne réveille jamais la voiture ; une commande envoyée à une voiture endormie la réveille.\nBorne Wall Connector (gen 3) : lue directement sur votre réseau local, sans Teslemetry ni abonnement. Saisissez son adresse IP ci-dessous ; le jeton peut alors rester vide."
+        "en": "This integration reaches your Tesla account through Teslemetry, a paid service that relays the official Tesla Fleet API (no Tesla developer account needed). Create a Teslemetry account, link your Tesla account, add the virtual key to your car, then create an access token in the Teslemetry console and paste it below. Reading data never wakes your car; a command sent to a sleeping car wakes it.",
+        "fr": "Cette intégration accède à votre compte Tesla via Teslemetry, un service payant qui relaie l'API Fleet officielle de Tesla (pas de compte développeur Tesla nécessaire). Créez un compte Teslemetry, liez votre compte Tesla, ajoutez la clé virtuelle à votre voiture, puis créez un jeton d'accès dans la console Teslemetry et collez-le ci-dessous. La lecture des données ne réveille jamais la voiture ; une commande envoyée à une voiture endormie la réveille."
       },
       "links": [
-        { "url": "https://teslemetry.com", "label": { "en": "Teslemetry", "fr": "Teslemetry" } },
+        {
+          "url": "https://teslemetry.com",
+          "label": { "en": "Teslemetry", "fr": "Teslemetry" }
+        },
         {
           "url": "https://teslemetry.com/pricing",
           "label": { "en": "Teslemetry pricing", "fr": "Tarifs Teslemetry" }
@@ -34,22 +37,10 @@
       "type": "secret",
       "label": { "en": "Teslemetry access token", "fr": "Jeton d'accès Teslemetry" },
       "description": {
-        "en": "Created in the Teslemetry console, with access to your vehicles and energy sites. Leave empty if you only use a Wall Connector.",
-        "fr": "Créé dans la console Teslemetry, avec l'accès à vos véhicules et sites d'énergie. Laissez vide si vous n'utilisez qu'une Wall Connector."
+        "en": "Created in the Teslemetry console, with access to your vehicles and energy sites.",
+        "fr": "Créé dans la console Teslemetry, avec l'accès à vos véhicules et sites d'énergie."
       },
-      "required": false
-    },
-    {
-      "key": "wall_connectors",
-      "type": "string",
-      "label": { "en": "Wall Connector addresses", "fr": "Adresses des bornes Wall Connector" },
-      "description": {
-        "en": "IP address (or host name) of each Tesla Wall Connector gen 3 on your network, separated by commas. Give it a fixed address in your router.",
-        "fr": "Adresse IP (ou nom d'hôte) de chaque borne Tesla Wall Connector gen 3 de votre réseau, séparées par des virgules. Fixez-lui une adresse dans votre box."
-      },
-      "placeholder": { "en": "e.g. 192.168.1.50", "fr": "ex. 192.168.1.50" },
-      "required": false,
-      "default": ""
+      "required": true
     },
     {
       "key": "units",
@@ -128,15 +119,6 @@
         "fr": "Liste les véhicules et sites d'énergie accessibles via Teslemetry. Gratuit : aucune voiture n'est réveillée."
       },
       "timeout_seconds": 30
-    },
-    {
-      "key": "test_wall_connector",
-      "label": { "en": "Test the Wall Connectors", "fr": "Tester les bornes Wall Connector" },
-      "description": {
-        "en": "Reads each configured address on the home network and shows what answers.",
-        "fr": "Interroge chaque adresse configurée sur le réseau local et affiche ce qui répond."
-      },
-      "timeout_seconds": 60
     }
   ],
   "scene_triggers": [
@@ -282,110 +264,6 @@
           "label": { "en": "Powerwall charge (%)", "fr": "Charge du Powerwall (%)" }
         }
       ]
-    },
-    {
-      "key": "wall_connector_plugged",
-      "label": {
-        "en": "Wall Connector: car plugged in",
-        "fr": "Wall Connector : voiture branchée"
-      },
-      "description": {
-        "en": "A car was plugged into the Wall Connector.",
-        "fr": "Une voiture a été branchée sur la Wall Connector."
-      },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Wall Connector", "fr": "Wall Connector" }
-        }
-      ],
-      "variables": [
-        {
-          "key": "session_energy",
-          "type": "number",
-          "label": { "en": "Session energy (kWh)", "fr": "Énergie de la session (kWh)" }
-        }
-      ]
-    },
-    {
-      "key": "wall_connector_unplugged",
-      "label": {
-        "en": "Wall Connector: car unplugged",
-        "fr": "Wall Connector : voiture débranchée"
-      },
-      "description": {
-        "en": "The car was unplugged from the Wall Connector.",
-        "fr": "La voiture a été débranchée de la Wall Connector."
-      },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Wall Connector", "fr": "Wall Connector" }
-        }
-      ],
-      "variables": [
-        {
-          "key": "session_energy",
-          "type": "number",
-          "label": { "en": "Session energy (kWh)", "fr": "Énergie de la session (kWh)" }
-        }
-      ]
-    },
-    {
-      "key": "wall_connector_charging_started",
-      "label": {
-        "en": "Wall Connector started charging",
-        "fr": "La Wall Connector a commencé à charger"
-      },
-      "description": {
-        "en": "The Wall Connector starts or resumes delivering power.",
-        "fr": "La Wall Connector commence ou reprend la charge."
-      },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Wall Connector", "fr": "Wall Connector" }
-        }
-      ],
-      "variables": [
-        {
-          "key": "session_energy",
-          "type": "number",
-          "label": { "en": "Session energy (kWh)", "fr": "Énergie de la session (kWh)" }
-        }
-      ]
-    },
-    {
-      "key": "wall_connector_charging_finished",
-      "label": {
-        "en": "Wall Connector charging finished",
-        "fr": "Charge de la Wall Connector terminée"
-      },
-      "description": {
-        "en": "The car plugged into the Wall Connector finished charging.",
-        "fr": "La voiture branchée sur la Wall Connector a fini de charger."
-      },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Wall Connector", "fr": "Wall Connector" }
-        }
-      ],
-      "variables": [
-        {
-          "key": "session_energy",
-          "type": "number",
-          "label": { "en": "Session energy (kWh)", "fr": "Énergie de la session (kWh)" }
-        }
-      ]
     }
   ],
   "scene_actions": [
@@ -459,24 +337,6 @@
           "type": "select",
           "source": "devices",
           "label": { "en": "Energy site", "fr": "Site d'énergie" },
-          "required": true
-        }
-      ]
-    },
-    {
-      "key": "wall_connector",
-      "label": { "en": "Tesla Wall Connector", "fr": "Borne Tesla Wall Connector" },
-      "description": {
-        "en": "Charging power, session and total energy, state of the charger and of the plugged car.",
-        "fr": "Puissance de charge, énergie de la session et totale, état de la borne et du véhicule."
-      },
-      "icon": "zap",
-      "settings": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Wall Connector", "fr": "Borne Wall Connector" },
           "required": true
         }
       ]

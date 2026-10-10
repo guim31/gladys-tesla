@@ -17,7 +17,7 @@ import { DEFAULT_CONFIG } from '../src/config.js';
 const SCENE_ACTIONS = createSceneActions({});
 const WIDGETS = createWidgets({});
 // Manifest actions registered in index.js.
-const HANDLED_ACTIONS = ['test_connection', 'test_wall_connector'];
+const HANDLED_ACTIONS = ['test_connection'];
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -205,11 +205,12 @@ test('field placeholders are multi-language objects', () => {
   }
 });
 
-test('the manifest identifies the Tesla integration', () => {
-  assert.equal(manifest.name, 'Tesla');
+test('the manifest identifies the Teslemetry integration', () => {
+  // Named after the service it goes through (other Tesla services may get
+  // their own integration); the repository and the image keep their names.
+  assert.equal(manifest.name, 'Teslemetry');
   assert.ok(manifest.docker_image.startsWith('ghcr.io/guim31/gladys-tesla:'));
-  // Teslemetry (cloud) and the Wall Connector read on the home network (local).
-  assert.deepEqual(manifest.transports, ['local', 'cloud']);
+  assert.deepEqual(manifest.transports, ['cloud']);
   for (const text of Object.values(manifest.description)) {
     assert.match(text, /Teslemetry/, 'the catalog description names Teslemetry');
   }
@@ -270,28 +271,27 @@ test('widget, trigger and action keys are stable English snake_case', () => {
     'grid_restored',
     'vehicle_plugged_in',
     'vehicle_unplugged',
-    'wall_connector_charging_finished',
-    'wall_connector_charging_started',
-    'wall_connector_plugged',
-    'wall_connector_unplugged',
   ]);
-  assert.deepEqual(keysOf(manifest.widgets), ['vehicle', 'energy_flow', 'wall_connector']);
+  assert.deepEqual(keysOf(manifest.widgets), ['vehicle', 'energy_flow']);
   assert.deepEqual(keysOf(manifest.scene_actions), ['set_backup_reserve']);
 });
 
-test('every key published in 1.0.1 is still there (keys are forever)', () => {
+test('every published key is still there, but for the Wall Connector, moved out on purpose', () => {
   // Users store these keys (configuration, scenes, dashboards): a later
-  // version may only add to them.
+  // version may only add to them. The one exception, decided on the forum
+  // (topic 11011): the Wall Connector keys of 1.1.0, now in the "Tesla Wall
+  // Connector" integration (same device ids), are withdrawn here.
   const published = {
     config_schema: [
       'intro',
       'access_token',
+      'wall_connectors',
       'units',
       'language',
       'vehicle_refresh_minutes',
       'home_energy_index',
     ],
-    actions: ['test_connection'],
+    actions: ['test_connection', 'test_wall_connector'],
     scene_triggers: [
       'charging_started',
       'charging_complete',
@@ -299,34 +299,44 @@ test('every key published in 1.0.1 is still there (keys are forever)', () => {
       'vehicle_unplugged',
       'grid_outage',
       'grid_restored',
+      'wall_connector_plugged',
+      'wall_connector_unplugged',
+      'wall_connector_charging_started',
+      'wall_connector_charging_finished',
     ],
     scene_actions: ['set_backup_reserve'],
-    widgets: ['vehicle', 'energy_flow'],
+    widgets: ['vehicle', 'energy_flow', 'wall_connector'],
+  };
+  const movedToWallConnectorIntegration = {
+    config_schema: ['wall_connectors'],
+    actions: ['test_wall_connector'],
+    scene_triggers: [
+      'wall_connector_plugged',
+      'wall_connector_unplugged',
+      'wall_connector_charging_started',
+      'wall_connector_charging_finished',
+    ],
+    widgets: ['wall_connector'],
   };
   for (const [field, keys] of Object.entries(published)) {
     const current = keysOf(manifest[field]);
-    for (const key of keys) assert.ok(current.includes(key), `${field}.${key} disappeared`);
+    const moved = movedToWallConnectorIntegration[field] ?? [];
+    for (const key of keys) {
+      if (moved.includes(key)) assert.ok(!current.includes(key), `${field}.${key} should be gone`);
+      else assert.ok(current.includes(key), `${field}.${key} disappeared`);
+    }
   }
-  // The car triggers stay as published: cars only, same variables. The Wall
-  // Connector has its own triggers.
-  for (const key of published.scene_triggers.filter((k) => !k.startsWith('grid_'))) {
+  // The car triggers keep the fields and variables they were published with.
+  for (const key of [
+    'charging_started',
+    'charging_complete',
+    'vehicle_plugged_in',
+    'vehicle_unplugged',
+  ]) {
     const trigger = manifest.scene_triggers.find((t) => t.key === key);
     assert.deepEqual(keysOf(trigger.variables), ['battery_level'], key);
     assert.deepEqual(trigger.fields[0].label, { en: 'Vehicle', fr: 'Véhicule' }, key);
   }
-  for (const trigger of manifest.scene_triggers.filter((t) =>
-    t.key.startsWith('wall_connector_'),
-  )) {
-    assert.deepEqual(keysOf(trigger.variables), ['session_energy'], trigger.key);
-  }
-  const vehicleRefresh = manifest.config_schema.find((f) => f.key === 'vehicle_refresh_minutes');
-  assert.equal(vehicleRefresh.default, '30');
-});
-
-test('the Teslemetry token is optional: a Wall Connector works without it', () => {
   const token = manifest.config_schema.find((f) => f.key === 'access_token');
-  assert.equal(token.required, false);
-  const hosts = manifest.config_schema.find((f) => f.key === 'wall_connectors');
-  assert.equal(hosts.type, 'string');
-  assert.equal(hosts.required, false);
+  assert.equal(token.required, true, 'the Teslemetry token is required again');
 });

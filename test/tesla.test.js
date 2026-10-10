@@ -553,3 +553,62 @@ test('widgets are nudged when their computed rows change, at most once per 10 s'
   assert.deepEqual(gladys.widgetRefreshes, ['vehicle', 'vehicle']);
   await tesla.stop();
 });
+
+// --- Wall Connector, moved to its own integration ----------------------------
+
+const WALL_CONNECTOR_DEVICE = 'ext:tesla:wall-connector:TESTWC0000EU01';
+
+test('a Wall Connector set up in 1.1.0: a clear notice, no crash, no charger read', async () => {
+  const store = createMemoryStore({
+    version: 1,
+    vehicles: {},
+    sites: {},
+    wallConnectors: { TESTWC0000EU01: { host: '192.0.2.10', energyKwh: 386.204 } },
+  });
+  const { gladys, tesla, clock } = await setup({
+    store,
+    config: { wall_connectors: '192.0.2.10' },
+  });
+  const status = gladys.connectionStatuses.at(-1);
+  assert.equal(status.connected, true);
+  assert.match(status.message.en, /own integration, Tesla Wall Connector/);
+  assert.match(status.message.fr, /propre intégration, Tesla Wall Connector/);
+  assert.equal(store.data.wallConnectors, undefined, 'the charger memory is dropped');
+  assert.ok(!gladys.discovered.some((d) => d.external_id === WALL_CONNECTOR_DEVICE));
+  // The charger device Gladys already has is simply not ours any more.
+  const device = { external_id: WALL_CONNECTOR_DEVICE };
+  await tesla.deviceCreated(device);
+  await tesla.poll(device);
+  await assert.rejects(
+    tesla.runCommand(device, { external_id: `${WALL_CONNECTOR_DEVICE}:power` }, 1),
+    /No command/,
+  );
+  await tesla.stop();
+  // After 30 days, the notice is gone.
+  clock.t += 31 * 24 * 60 * 60 * 1000;
+  await tesla.start(normalizeConfig({ access_token: 'test-token', wall_connectors: '192.0.2.10' }));
+  assert.equal(gladys.connectionStatuses.at(-1).message, undefined);
+  await tesla.stop();
+});
+
+test('a Wall Connector without a Teslemetry token: the notice comes first', async () => {
+  const gladys = createFakeGladys();
+  const tesla = createTesla({
+    gladys,
+    store: createMemoryStore(),
+    logger: silent,
+    clientFactory: () => createFakeClient(),
+    streamFactory: createFakeStreamFactory(),
+  });
+  await tesla.start(normalizeConfig({ wall_connectors: '192.0.2.10' }));
+  const status = gladys.connectionStatuses.at(-1);
+  assert.equal(status.connected, false);
+  assert.match(status.message.en, /^The Wall Connector now has its own integration.*access token/);
+  await tesla.stop();
+});
+
+test('no Wall Connector ever set up: no notice', async () => {
+  const { gladys, tesla } = await setup();
+  assert.equal(gladys.connectionStatuses.at(-1).message, undefined);
+  await tesla.stop();
+});
