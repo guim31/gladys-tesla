@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLogger, validateWidgetContent } from '@gladysassistant/integration-sdk';
 import {
+  MAX_RESPONSE_BYTES,
   createWallConnectorClient,
   normalizeHost,
   parseHosts,
@@ -24,7 +25,12 @@ import { createTesla, WALL_CONNECTOR_POLL_MS } from '../src/tesla.js';
 import { normalizeConfig } from '../src/config.js';
 import { createWidgets } from '../src/widgets.js';
 import { createFakeGladys } from './helpers/fakeGladys.js';
-import { createFakeStreamFactory, createMemoryStore } from './helpers/fakeTeslemetry.js';
+import {
+  createFakeClient,
+  createFakeStreamFactory,
+  createMemoryStore,
+} from './helpers/fakeTeslemetry.js';
+import { SCENE_TRIGGERS, wallConnectorTransitions } from '../src/triggers.js';
 import {
   WC_HOSTS,
   createFakeWallNetwork,
@@ -91,6 +97,34 @@ test('the client reads http://<host>/api/1/<endpoint>, without credentials', asy
   await assert.rejects(http.vitals(), { kind: 'http' });
 });
 
+test('the client refuses redirects and oversized answers', async () => {
+  let init;
+  const redirected = createWallConnectorClient({
+    host: WC_HOSTS.EU,
+    fetchImpl: async (url, options) => {
+      init = options;
+      throw new TypeError('fetch failed', { cause: new Error('unexpected redirect') });
+    },
+  });
+  await assert.rejects(redirected.vitals(), { kind: 'network' });
+  assert.equal(init.redirect, 'error');
+  const huge = 'x'.repeat(MAX_RESPONSE_BYTES + 1);
+  const streamed = createWallConnectorClient({
+    host: WC_HOSTS.EU,
+    fetchImpl: async () => new Response(new Blob([huge]).stream(), { status: 200 }),
+  });
+  await assert.rejects(streamed.vitals(), { kind: 'decode', message: /too large/ });
+  const declared = createWallConnectorClient({
+    host: WC_HOSTS.EU,
+    fetchImpl: async () =>
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-length': String(MAX_RESPONSE_BYTES + 1) },
+      }),
+  });
+  await assert.rejects(declared.vitals(), { kind: 'decode', message: /too large/ });
+});
+
 // --- Mapping --------------------------------------------------------------------
 
 test('power: three phases in Europe, grid voltage × current on a 60 Hz supply', () => {
@@ -128,6 +162,16 @@ test('the vitals become Gladys states', () => {
   );
   const byKey = Object.fromEntries(finished.map(({ key, value }) => [key, value]));
   assert.equal(byKey[F.CHARGING_STATE], 4, 'finished: idle');
+  // No car: Gladys expects "idle" only with a car plugged in, so nothing.
+  const unplugged = wallConnectorStates(
+    { vitals: wcFixture('vitals_eu_unplugged') },
+    { language: 'en', temperatureUnit: 'celsius' },
+  );
+  assert.equal(
+    unplugged.find((st) => st.key === F.CHARGING_STATE),
+    undefined,
+  );
+  assert.equal(unplugged.find((st) => st.key === F.CONNECTOR_STATUS).value, 0, 'available');
   assert.equal(byKey[F.POWER], 0);
   assert.equal(byKey[F.HANDLE_TEMPERATURE], 64.8);
   // Unreachable: only what is still true.
@@ -150,6 +194,17 @@ test('charge sessions speak the cars’ vocabulary; unknown states make no trans
   assert.equal(sessionState({ evse_state: 7, vehicle_connected: true }), null, 'error');
   assert.equal(sessionState({ evse_state: 0 }), null, 'booting');
   assert.equal(statusText('fr', { evse_state: 42 }), 'État 42');
+  const T = SCENE_TRIGGERS;
+  const between = (a, b) => wallConnectorTransitions({ sessionState: a }, { sessionState: b });
+  assert.deepEqual(between('Disconnected', 'Charging'), [
+    T.WALL_CONNECTOR_PLUGGED,
+    T.WALL_CONNECTOR_CHARGING_STARTED,
+  ]);
+  assert.deepEqual(between('Stopped', 'Complete'), [T.WALL_CONNECTOR_CHARGING_FINISHED]);
+  assert.deepEqual(between('Disconnected', 'Complete'), [T.WALL_CONNECTOR_PLUGGED]);
+  assert.deepEqual(between('Complete', 'Disconnected'), [T.WALL_CONNECTOR_UNPLUGGED]);
+  assert.deepEqual(between(undefined, 'Charging'), [], 'first value');
+  assert.deepEqual(between('Charging', 'Charging'), []);
   assert.equal(statusText('en', {}), null, 'never an empty text');
 });
 
@@ -226,7 +281,7 @@ test('nothing unchanged is published again; the lifetime counter is read every m
   await tesla.stop();
 });
 
-test('a charge session on the Wall Connector fires the shared scene triggers', async () => {
+test('a charge session on the Wall Connector fires its own scene triggers, never the cars’ ones', async () => {
   const { gladys, tesla, net, poll } = await setup();
   net.set(WC_HOSTS.EU, { vitals: wcFixture('vitals_eu_charging') });
   await poll();
@@ -237,15 +292,14 @@ test('a charge session on the Wall Connector fires the shared scene triggers', a
   assert.deepEqual(
     gladys.sceneEvents.map((e) => [e.key, e.data.device]),
     [
-      ['vehicle_plugged_in', EU],
-      ['charging_started', EU],
-      ['charging_complete', EU],
-      ['vehicle_unplugged', EU],
+      ['wall_connector_plugged', EU],
+      ['wall_connector_charging_started', EU],
+      ['wall_connector_charging_finished', EU],
+      ['wall_connector_unplugged', EU],
     ],
   );
   assert.deepEqual(gladys.sceneEvents[2].data, {
     device: EU,
-    battery_level: null,
     session_energy: 41.72,
   });
   assert.equal(gladys.last(`${EU}:connector-status`), 0);
@@ -265,26 +319,28 @@ test('a restart neither repeats nor misses a trigger', async () => {
   await second.poll();
   assert.deepEqual(
     second.gladys.sceneEvents.map((e) => e.key),
-    ['charging_complete'],
+    ['wall_connector_charging_finished'],
   );
   await second.tesla.stop();
 });
 
-test('the energy index only grows, and survives a restart', async () => {
+test('the energy index follows the charger, even downwards, and survives a restart', async () => {
   const store = createMemoryStore();
   const { gladys, tesla, net, poll } = await setup({ store });
   assert.equal(gladys.last(`${EU}:energy`), 386.204);
   net.set(WC_HOSTS.EU, { lifetime: { ...wcFixture('lifetime'), energy_wh: 397489 } });
   await poll(60 * 1000);
   assert.equal(gladys.last(`${EU}:energy`), 397.489);
-  // A lower reading (firmware glitch) is held, a nan/0 ignored.
-  net.set(WC_HOSTS.EU, { lifetime: { ...wcFixture('lifetime'), energy_wh: 1200 } });
-  await poll(60 * 1000);
+  // A nan/0 is ignored; a lower reading goes through, for Gladys to treat as
+  // a meter reset (holding the old value would freeze the index for good).
   net.set(WC_HOSTS.EU, { lifetime: { ...wcFixture('lifetime'), energy_wh: null } });
   await poll(60 * 1000);
   assert.equal(gladys.last(`${EU}:energy`), 397.489);
+  net.set(WC_HOSTS.EU, { lifetime: { ...wcFixture('lifetime'), energy_wh: 1200 } });
+  await poll(60 * 1000);
+  assert.equal(gladys.last(`${EU}:energy`), 1.2);
   await tesla.stop();
-  assert.equal(store.data.wallConnectors.TESTWC0000EU01.energyKwh, 397.489);
+  assert.equal(store.data.wallConnectors.TESTWC0000EU01.energyKwh, 1.2);
 });
 
 test('the device follows the serial number, not the IP address', async () => {
@@ -381,6 +437,40 @@ test('changing the addresses restarts the chargers', async () => {
     gladys.discovered.map((d) => d.external_id),
     [NA],
   );
+  await tesla.stop();
+});
+
+test('the cars never wait behind an unreachable charger, and chargers are read in parallel', async () => {
+  const gladys = createFakeGladys();
+  const pending = [];
+  const hanging = ({ host }) => {
+    const wait = () =>
+      new Promise((resolve, reject) =>
+        pending.push(() => reject(new Error(`Wall Connector ${host} unreachable`))),
+      );
+    return { host, vitals: wait, lifetime: wait, version: wait, wifiStatus: wait };
+  };
+  const tesla = createTesla({
+    gladys,
+    store: createMemoryStore(),
+    logger: silent,
+    clientFactory: () => createFakeClient(),
+    streamFactory: createFakeStreamFactory(),
+    wallClientFactory: hanging,
+  });
+  const started = tesla.start(
+    normalizeConfig({
+      access_token: 'test-token',
+      wall_connectors: `${WC_HOSTS.EU}, ${WC_HOSTS.NA}`,
+    }),
+  );
+  for (let i = 0; i < 20 && gladys.discovered.length === 0; i += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.ok(gladys.discovered.length > 0, 'cars discovered while the chargers hang');
+  assert.equal(pending.length, 2, 'both chargers asked at once');
+  for (const fail of pending) fail();
+  await started;
   await tesla.stop();
 });
 

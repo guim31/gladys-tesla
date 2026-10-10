@@ -70,6 +70,35 @@ export function parseHosts(value) {
   return hosts;
 }
 
+// The real answers are under 2 KB: anything far larger is not a Wall Connector.
+export const MAX_RESPONSE_BYTES = 64 * 1024;
+
+/** The body as text, refused past `maxBytes` (read as a stream, never buffered whole). */
+async function readCapped(response, host, maxBytes) {
+  const tooLarge = () =>
+    new WallConnectorError(`Wall Connector ${host} answer too large`, { kind: 'decode' });
+  if (Number(response.headers.get('content-length')) > maxBytes) {
+    await response.body?.cancel().catch(() => {});
+    throw tooLarge();
+  }
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let size = 0;
+  let text = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel().catch(() => {});
+      throw tooLarge();
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
 /**
  * @param {object} options
  * @param {string} options.host IP address or host name (optionally :port)
@@ -86,6 +115,8 @@ export function createWallConnectorClient({
     try {
       response = await fetchImpl(`http://${host}/api/1/${endpoint}`, {
         headers: { Accept: 'application/json' },
+        // The charger never redirects: a redirect would lead off the home network.
+        redirect: 'error',
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (err) {
@@ -96,7 +127,14 @@ export function createWallConnectorClient({
         kind: 'http',
       });
     }
-    return parseWallConnectorJson(await response.text());
+    let text;
+    try {
+      text = await readCapped(response, host, MAX_RESPONSE_BYTES);
+    } catch (err) {
+      if (err instanceof WallConnectorError) throw err;
+      throw new WallConnectorError(`Wall Connector ${host} unreachable (${err.name})`);
+    }
+    return parseWallConnectorJson(text);
   }
 
   return {

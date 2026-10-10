@@ -144,33 +144,22 @@
       "key": "charging_started",
       "label": { "en": "Tesla started charging", "fr": "La Tesla a commencé à charger" },
       "description": {
-        "en": "A charging session starts or resumes, seen by the car or by the Wall Connector.",
-        "fr": "Une session de charge démarre ou reprend, vue par la voiture ou par la borne."
+        "en": "A charging session starts or resumes.",
+        "fr": "Une session de charge démarre ou reprend."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Vehicle or Wall Connector", "fr": "Véhicule ou borne Wall Connector" }
+          "label": { "en": "Vehicle", "fr": "Véhicule" }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": {
-            "en": "Battery level (%, cars only)",
-            "fr": "Niveau de batterie (%, voitures seulement)"
-          }
-        },
-        {
-          "key": "session_energy",
-          "type": "number",
-          "label": {
-            "en": "Session energy (kWh, Wall Connector)",
-            "fr": "Énergie de la session (kWh, borne)"
-          }
+          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
         }
       ]
     },
@@ -178,33 +167,22 @@
       "key": "charging_complete",
       "label": { "en": "Tesla charging complete", "fr": "Charge de la Tesla terminée" },
       "description": {
-        "en": "The car reached its charge limit, or the Wall Connector finished charging.",
-        "fr": "La voiture a atteint sa limite de charge, ou la borne a fini de charger."
+        "en": "The car reached its charge limit.",
+        "fr": "La voiture a atteint sa limite de charge."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Vehicle or Wall Connector", "fr": "Véhicule ou borne Wall Connector" }
+          "label": { "en": "Vehicle", "fr": "Véhicule" }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": {
-            "en": "Battery level (%, cars only)",
-            "fr": "Niveau de batterie (%, voitures seulement)"
-          }
-        },
-        {
-          "key": "session_energy",
-          "type": "number",
-          "label": {
-            "en": "Session energy (kWh, Wall Connector)",
-            "fr": "Énergie de la session (kWh, borne)"
-          }
+          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
         }
       ]
     },
@@ -212,33 +190,22 @@
       "key": "vehicle_plugged_in",
       "label": { "en": "Tesla plugged in", "fr": "Tesla branchée" },
       "description": {
-        "en": "A charging cable was connected to the car, or a car to the Wall Connector.",
-        "fr": "Un câble de charge a été branché sur la voiture, ou une voiture sur la borne."
+        "en": "A charging cable was connected to the car.",
+        "fr": "Un câble de charge a été branché sur la voiture."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Vehicle or Wall Connector", "fr": "Véhicule ou borne Wall Connector" }
+          "label": { "en": "Vehicle", "fr": "Véhicule" }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": {
-            "en": "Battery level (%, cars only)",
-            "fr": "Niveau de batterie (%, voitures seulement)"
-          }
-        },
-        {
-          "key": "session_energy",
-          "type": "number",
-          "label": {
-            "en": "Session energy (kWh, Wall Connector)",
-            "fr": "Énergie de la session (kWh, borne)"
-          }
+          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
         }
       ]
     },
@@ -246,33 +213,22 @@
       "key": "vehicle_unplugged",
       "label": { "en": "Tesla unplugged", "fr": "Tesla débranchée" },
       "description": {
-        "en": "The charging cable was removed from the car or from the Wall Connector.",
-        "fr": "Le câble de charge a été retiré de la voiture ou de la borne."
+        "en": "The charging cable was removed from the car.",
+        "fr": "Le câble de charge a été retiré de la voiture."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Vehicle or Wall Connector", "fr": "Véhicule ou borne Wall Connector" }
+          "label": { "en": "Vehicle", "fr": "Véhicule" }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": {
-            "en": "Battery level (%, cars only)",
-            "fr": "Niveau de batterie (%, voitures seulement)"
-          }
-        },
-        {
-          "key": "session_energy",
-          "type": "number",
-          "label": {
-            "en": "Session energy (kWh, Wall Connector)",
-            "fr": "Énergie de la session (kWh, borne)"
-          }
+          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
         }
       ]
     },
@@ -324,6 +280,110 @@
           "key": "battery_level",
           "type": "number",
           "label": { "en": "Powerwall charge (%)", "fr": "Charge du Powerwall (%)" }
+        }
+      ]
+    },
+    {
+      "key": "wall_connector_plugged",
+      "label": {
+        "en": "Wall Connector: car plugged in",
+        "fr": "Wall Connector : voiture branchée"
+      },
+      "description": {
+        "en": "A car was plugged into the Wall Connector.",
+        "fr": "Une voiture a été branchée sur la Wall Connector."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Wall Connector", "fr": "Wall Connector" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "session_energy",
+          "type": "number",
+          "label": { "en": "Session energy (kWh)", "fr": "Énergie de la session (kWh)" }
+        }
+      ]
+    },
+    {
+      "key": "wall_connector_unplugged",
+      "label": {
+        "en": "Wall Connector: car unplugged",
+        "fr": "Wall Connector : voiture débranchée"
+      },
+      "description": {
+        "en": "The car was unplugged from the Wall Connector.",
+        "fr": "La voiture a été débranchée de la Wall Connector."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Wall Connector", "fr": "Wall Connector" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "session_energy",
+          "type": "number",
+          "label": { "en": "Session energy (kWh)", "fr": "Énergie de la session (kWh)" }
+        }
+      ]
+    },
+    {
+      "key": "wall_connector_charging_started",
+      "label": {
+        "en": "Wall Connector started charging",
+        "fr": "La Wall Connector a commencé à charger"
+      },
+      "description": {
+        "en": "The Wall Connector starts or resumes delivering power.",
+        "fr": "La Wall Connector commence ou reprend la charge."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Wall Connector", "fr": "Wall Connector" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "session_energy",
+          "type": "number",
+          "label": { "en": "Session energy (kWh)", "fr": "Énergie de la session (kWh)" }
+        }
+      ]
+    },
+    {
+      "key": "wall_connector_charging_finished",
+      "label": {
+        "en": "Wall Connector charging finished",
+        "fr": "Charge de la Wall Connector terminée"
+      },
+      "description": {
+        "en": "The car plugged into the Wall Connector finished charging.",
+        "fr": "La voiture branchée sur la Wall Connector a fini de charger."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Wall Connector", "fr": "Wall Connector" }
+        }
+      ],
+      "variables": [
+        {
+          "key": "session_energy",
+          "type": "number",
+          "label": { "en": "Session energy (kWh)", "fr": "Énergie de la session (kWh)" }
         }
       ]
     }

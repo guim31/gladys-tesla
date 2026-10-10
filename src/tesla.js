@@ -57,7 +57,7 @@ import {
 } from './devices/wallConnector.js';
 import { createWallConnectorClient } from './wallConnector/client.js';
 import { createIndexState, currentIndex, recordDailyTotal } from './energyIndex.js';
-import { siteTransitions, vehicleTransitions } from './triggers.js';
+import { siteTransitions, vehicleTransitions, wallConnectorTransitions } from './triggers.js';
 import { vehicleUnits } from './units.js';
 
 const MINUTE = 60 * 1000;
@@ -673,23 +673,22 @@ export function createTesla({
     const memory = persistedWallConnectors()[wc.serial] ?? {};
     let memoryChanged = memory.host !== wc.host;
     const next = { ...memory, host: wc.host };
-    // The lifetime counter only grows: hold a lower reading (a firmware glitch)
-    // rather than publish what Gladys would read as a meter reset.
+    // A lower lifetime reading (a firmware glitch, a replaced charger) goes
+    // through as is: Gladys's energy derivation treats it as a meter reset,
+    // where holding the old value would freeze the index for good.
     if (Number.isFinite(energyWh) && energyWh > 0) {
       const kwh = Math.round(energyWh) / 1000;
-      if (!(Number.isFinite(memory.energyKwh) && kwh < memory.energyKwh)) {
-        if (kwh !== memory.energyKwh) memoryChanged = true;
-        next.energyKwh = kwh;
-      }
+      if (kwh !== memory.energyKwh) memoryChanged = true;
+      next.energyKwh = kwh;
     }
     wc.energyKwh = next.energyKwh ?? null;
-    // Scene triggers: the cars' charge-session transitions, read on the charger.
+    // Scene triggers: the charger's own session transitions.
     let transitions = [];
     const session = vitals ? sessionState(vitals) : null;
     if (session) {
-      transitions = vehicleTransitions(
-        { chargingState: memory.chargingState },
-        { chargingState: session },
+      transitions = wallConnectorTransitions(
+        { sessionState: memory.chargingState },
+        { sessionState: session },
       );
       if (session !== memory.chargingState) {
         next.chargingState = session;
@@ -705,7 +704,6 @@ export function createTesla({
       const sessionWh = Number(wc.vitals?.session_energy_wh);
       await fireTriggers(transitions, {
         device: wallConnectorIds(gladys, wc.serial).device,
-        battery_level: null,
         session_energy: Number.isFinite(sessionWh) ? Math.round(sessionWh / 10) / 100 : null,
       });
     }
@@ -764,14 +762,12 @@ export function createTesla({
     }
   }
 
-  // Several unreachable chargers (10 s timeout each) can outlast the 15 s
-  // period: a round still running makes the next one skip.
+  // The chargers are read in parallel, so an unreachable one (10 s timeout)
+  // never delays the others; a round still running makes the next one skip.
   let wallPolling = null;
   async function pollWallConnectors() {
     if (wallPolling) return wallPolling;
-    wallPolling = (async () => {
-      for (const wc of wallConnectors.values()) await pollWallConnector(wc);
-    })().finally(() => {
+    wallPolling = Promise.all([...wallConnectors.values()].map(pollWallConnector)).finally(() => {
       wallPolling = null;
     });
     return wallPolling;
@@ -847,8 +843,8 @@ export function createTesla({
 
   async function start(newConfig) {
     config = newConfig;
-    await startWallConnectors();
     if (!config.access_token) {
+      await startWallConnectors();
       await publishDevices({ force: true });
       await publishWallConnectorTransports();
       if (wallConnectors.size === 0) await setStatus(false, STATUS_MESSAGES.noToken);
@@ -856,10 +852,16 @@ export function createTesla({
       return;
     }
     client = clientFactory({ token: config.access_token });
+    // The cars and their stream never wait behind an unreachable charger
+    // (10 s timeout): the chargers start alongside.
+    const chargers = startWallConnectors().catch((err) =>
+      logger.error('Wall Connector start failed', err),
+    );
     const ok = await discover();
     startStream();
     ticker = setInterval(() => tick().catch((err) => logger.error('Refresh failed', err)), MINUTE);
     ticker.unref?.();
+    await chargers;
     if (ok) logger.info(`Tesla: ${vehicles.size} vehicle(s), ${sites.size} energy site(s)`);
   }
 

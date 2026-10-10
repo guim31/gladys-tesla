@@ -270,6 +270,10 @@ test('widget, trigger and action keys are stable English snake_case', () => {
     'grid_restored',
     'vehicle_plugged_in',
     'vehicle_unplugged',
+    'wall_connector_charging_finished',
+    'wall_connector_charging_started',
+    'wall_connector_plugged',
+    'wall_connector_unplugged',
   ]);
   assert.deepEqual(keysOf(manifest.widgets), ['vehicle', 'energy_flow', 'wall_connector']);
   assert.deepEqual(keysOf(manifest.scene_actions), ['set_backup_reserve']);
@@ -303,11 +307,17 @@ test('every key published in 1.0.1 is still there (keys are forever)', () => {
     const current = keysOf(manifest[field]);
     for (const key of keys) assert.ok(current.includes(key), `${field}.${key} disappeared`);
   }
-  for (const trigger of manifest.scene_triggers) {
-    assert.ok(
-      keysOf(trigger.variables).includes('battery_level') || trigger.key.startsWith('grid_'),
-      `${trigger.key}: variable battery_level disappeared`,
-    );
+  // The car triggers stay as published: cars only, same variables. The Wall
+  // Connector has its own triggers.
+  for (const key of published.scene_triggers.filter((k) => !k.startsWith('grid_'))) {
+    const trigger = manifest.scene_triggers.find((t) => t.key === key);
+    assert.deepEqual(keysOf(trigger.variables), ['battery_level'], key);
+    assert.deepEqual(trigger.fields[0].label, { en: 'Vehicle', fr: 'Véhicule' }, key);
+  }
+  for (const trigger of manifest.scene_triggers.filter((t) =>
+    t.key.startsWith('wall_connector_'),
+  )) {
+    assert.deepEqual(keysOf(trigger.variables), ['session_energy'], trigger.key);
   }
   const vehicleRefresh = manifest.config_schema.find((f) => f.key === 'vehicle_refresh_minutes');
   assert.equal(vehicleRefresh.default, '30');

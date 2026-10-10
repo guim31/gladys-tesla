@@ -44,8 +44,8 @@ number, not its IP address. Read-only (its local API takes no command).
 
 **Dashboard widgets** (Gladys 5.1+): a _Tesla vehicle_ card, a _Tesla energy
 flow_ card and a _Tesla Wall Connector_ card. **Scene triggers**: charging
-started / complete, plugged in / unplugged (from a car or a Wall Connector),
-grid outage / restored. **Scene action**: set the Powerwall backup
+started / complete, plugged in / unplugged (for a car, and the same four for a
+Wall Connector), grid outage / restored. **Scene action**: set the Powerwall backup
 reserve.
 
 The user documentation, with the full feature list, the setup and the costs, is
@@ -165,7 +165,8 @@ versions by hand.
   are anonymized (fake VINs, identifiers and names).
 - The Wall Connector local API, its quirks and test answers follow the
   [`tesla-wall-connector`](https://github.com/einarhauks/tesla-wall-connector)
-  Python library (MIT, Einar Bragi Hauksson) and the
+  Python library (MIT; its license, which covers the fixtures derived from its
+  tests, is in [`test/fixtures/wall-connector/LICENSE`](test/fixtures/wall-connector/LICENSE)) and the
   [Home Assistant Tesla Wall Connector integration](https://github.com/home-assistant/core/tree/dev/homeassistant/components/tesla_wall_connector)
   (Apache 2.0, @einarhauks, @sarabveer and the Home Assistant contributors).
 - Tesla Fleet API documentation: <https://developer.tesla.com/docs/fleet-api>.

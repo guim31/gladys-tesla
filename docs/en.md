@@ -158,8 +158,9 @@ shows as unreachable.
 
 The **total energy** index is the charger's own lifetime counter. Gladys
 derives the consumption per half hour and its cost from it, and files it under
-your main electric meter: the charger is one of the loads of the house, it is
-not counted twice.
+your main electric meter: the charger shows as a sub-meter of your main meter.
+Do not tick both the main meter and the charger (nor the Powerwall home index)
+in the same widget if you want an accurate total.
 
 The charger reports voltages and currents, not the power: it is computed per
 phase (three-phase in Europe), or as grid voltage × current on a North
@@ -185,8 +186,13 @@ Three widgets (Gladys 5.1+), each set up with the device it shows:
 Triggers (each one optionally limited to one car, charger or energy site):
 
 - **Tesla started charging**, **Tesla charging complete**,
-  **Tesla plugged in**, **Tesla unplugged** — seen by a car (with its battery
-  level) or by a Wall Connector (with the session energy, in kWh).
+  **Tesla plugged in**, **Tesla unplugged** — seen by the car, with its battery
+  level.
+- **Wall Connector started charging**, **Wall Connector charging finished**,
+  **Wall Connector: car plugged in**, **Wall Connector: car unplugged** — seen
+  by the charger, with the session energy in kWh. They work without
+  Teslemetry; with a car followed through Teslemetry, the car and the charger
+  each fire their own.
 - **Grid outage (Powerwall)** and **Grid restored (Powerwall)** — with the
   Powerwall charge, and whether the outage is an intentional "go off-grid".
 

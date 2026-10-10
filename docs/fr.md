@@ -170,8 +170,10 @@ suite, la borne apparaît injoignable.
 
 L'index d'**énergie totale** est le compteur propre de la borne. Gladys en
 calcule la consommation par demi-heure et son coût, et le range sous votre
-compteur électrique principal : la borne est l'une des charges de la maison,
-elle n'est pas comptée deux fois.
+compteur électrique principal : la borne apparaît comme un sous-compteur de
+votre compteur principal. Ne cochez pas le compteur principal et la borne (ni
+l'index maison du Powerwall) dans le même widget si vous voulez un total
+juste.
 
 La borne donne des tensions et des courants, pas la puissance : celle-ci est
 calculée phase par phase (triphasé en Europe), ou comme tension × courant sur
@@ -198,9 +200,13 @@ Trois widgets (Gladys 5.1+), chacun réglé avec l'appareil qu'il affiche :
 Déclencheurs (chacun limitable à une voiture, une borne ou un site d'énergie) :
 
 - **La Tesla a commencé à charger**, **Charge de la Tesla terminée**,
-  **Tesla branchée**, **Tesla débranchée** — vus par une voiture (avec son
-  niveau de batterie) ou par une Wall Connector (avec l'énergie de la session,
-  en kWh).
+  **Tesla branchée**, **Tesla débranchée** — vus par la voiture, avec son
+  niveau de batterie.
+- **La Wall Connector a commencé à charger**, **Charge de la Wall Connector
+  terminée**, **Wall Connector : voiture branchée**, **Wall Connector : voiture
+  débranchée** — vus par la borne, avec l'énergie de la session en kWh. Ils
+  fonctionnent sans Teslemetry ; avec une voiture suivie par Teslemetry, la
+  voiture et la borne déclenchent chacune les leurs.
 - **Coupure réseau (Powerwall)** et **Retour du réseau (Powerwall)** — avec la
   charge du Powerwall, et si la coupure est un passage volontaire hors réseau.
 

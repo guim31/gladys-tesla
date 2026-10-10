@@ -253,9 +253,10 @@ function chargingState(vitals) {
       return CHARGING_STATION_STATE.EV_CONNECTED;
     case 9:
       return CHARGING_STATION_STATE.PAUSED_BY_VEHICLE;
-    case 1:
+    // Gladys's charge session enum expects "idle" only with a car plugged in
+    // (OCCUPIED): no car (state 1), nothing is published.
     case 8:
-      return CHARGING_STATION_STATE.IDLE;
+      return vitals.vehicle_connected === false ? null : CHARGING_STATION_STATE.IDLE;
     default:
       return null;
   }

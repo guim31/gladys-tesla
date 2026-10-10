@@ -19,15 +19,14 @@ the notes of the version's GitHub Release.
   per charger, identified by its serial number.
 - A _Wall Connector addresses_ setting and a _Test the Wall Connectors_ action.
 - A _Tesla Wall Connector_ dashboard widget.
-- The charging scene triggers (started, complete, plugged in, unplugged) also
-  fire for a Wall Connector, with the session energy.
+- Wall Connector scene triggers, with the session energy: _car plugged in_,
+  _car unplugged_, _started charging_, _charging finished_. The car triggers
+  are unchanged.
 
 ### Changed
 
 - The Teslemetry access token is optional: with only Wall Connectors
   configured, the integration publishes only them.
-- On a plug-in that starts charging at once, _plugged in_ now fires before
-  _charging started_.
 
 ## [1.0.1] - 2026-10-09
 
