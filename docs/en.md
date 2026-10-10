@@ -1,14 +1,16 @@
-# Tesla (via Teslemetry)
+# Tesla (Teslemetry and Wall Connector)
 
 Follow and control your Tesla cars, your Powerwall and your solar panels from
 Gladys: battery, range, charging, climate, locks, Sentry Mode, and the energy
-flows of your home in real time.
+flows of your home in real time. A **Tesla Wall Connector (gen 3)** is read
+directly on your home network: no Teslemetry, no subscription.
 
 > **Developed without the hardware: feedback welcome.** This integration was
 > built without a car, a Powerwall or a Teslemetry account, and tested on
 > sample API answers adapted from the Home Assistant Teslemetry integration's
-> tests and the Tesla Fleet API documentation. If something looks wrong, please
-> say so on the Gladys forum.
+> tests and the Tesla Fleet API documentation. The Wall Connector support was
+> built without a charger, on the sample answers of the `tesla-wall-connector`
+> library's tests. If something looks wrong, please say so on the Gladys forum.
 
 This integration is not affiliated with Tesla, Inc. or Teslemetry.
 
@@ -28,6 +30,9 @@ wakes it up.
 ## What you need
 
 - Gladys **5.1** or later.
+- For a **Wall Connector only**: nothing else than its address on your network
+  (see [Your Wall Connector](#your-wall-connector-local-no-subscription)). The
+  rest of this list is for the cars and the Powerwall.
 - A [Teslemetry](https://teslemetry.com) account linked to your Tesla account,
   with a subscription for each car and energy site you want in Gladys.
 - For commands: the Teslemetry **virtual key** added to each car (Teslemetry
@@ -59,6 +64,7 @@ odometer, display units). It only adds fields, it never removes yours.
 | **Device names language**                             | English or French names for the features of new devices. Gladys keeps a feature's name once the device is created.                                                                                                                |
 | **Backup refresh of the cars**                        | How often an **awake** car that streams nothing is read (30 or 60 minutes, or never). Never while the car sleeps.                                                                                                                 |
 | **Send the home consumption to the energy dashboard** | Off by default. Adds the home consumption index to Powerwall sites (see below).                                                                                                                                                   |
+| **Wall Connector addresses**                          | IP address (or host name) of each Wall Connector gen 3, separated by commas. With only this filled in, the Teslemetry token can stay empty.                                                                                       |
 
 Changing **Units** on a car you already added: the Discovery tab offers an
 **Update** for it. Until you accept, the car keeps being published in its
@@ -117,9 +123,51 @@ start from zero. The indexes start counting when the
 integration is installed: Tesla does not give lifetime totals, they are built
 from the daily totals Teslemetry streams.
 
+## Your Wall Connector (local, no subscription)
+
+The **Tesla Wall Connector gen 3** answers on your home network, without an
+account and without a password. Gladys reads it there directly: no Teslemetry,
+no subscription, no cloud. This works on its own (leave the Teslemetry token
+empty) or next to your cars.
+
+1. Find the charger's IP address in your router (it is on your Wi-Fi), and
+   give it a **fixed address** there, so it does not change.
+2. In the **Configuration** tab, type it in **Wall Connector addresses**
+   (several chargers: separate them with commas), save.
+3. Click **Test the Wall Connectors**: each address shows the charger's serial
+   number end, firmware and state, or why it does not answer.
+4. Add the charger from the **Discovery** tab.
+
+The charger is identified by its serial number: if its IP address changes,
+type the new one and the same device goes on, with its history.
+
+| Feature                | Details                                                                   |
+| ---------------------- | ------------------------------------------------------------------------- |
+| Connector              | Available, occupied (a car is plugged in), unavailable, faulted           |
+| Charging state         | Charging, vehicle connected, paused by the car, idle                      |
+| Status                 | The charger's own state in words (ready, negotiating, charging finished…) |
+| Charging power         | W                                                                         |
+| Session energy         | kWh delivered since the car was plugged in                                |
+| Total energy delivered | Cumulative kWh index, for the Gladys energy dashboard                     |
+| Grid voltage, current  | V, A                                                                      |
+| Handle temperature     | °C, or °F on a North American charger (or as set in **Units**)            |
+
+It is read every **15 seconds** (the lifetime counter every minute), and only
+what changed is sent to Gladys. After three missed reads in a row the charger
+shows as unreachable.
+
+The **total energy** index is the charger's own lifetime counter. Gladys
+derives the consumption per half hour and its cost from it, and files it under
+your main electric meter: the charger is one of the loads of the house, it is
+not counted twice.
+
+The charger reports voltages and currents, not the power: it is computed per
+phase (three-phase in Europe), or as grid voltage × current on a North
+American 240 V split-phase supply (recognized by its 60 Hz grid).
+
 ## Dashboard
 
-Two widgets (Gladys 5.1+), each set up with the device it shows:
+Three widgets (Gladys 5.1+), each set up with the device it shows:
 
 - **Tesla vehicle**: battery, range, charging power and cabin temperature in
   real time, the charging, climate, locks, Sentry Mode and online status, and
@@ -128,13 +176,17 @@ Two widgets (Gladys 5.1+), each set up with the device it shows:
 - **Tesla energy flow**: solar, home, grid and Powerwall in real time, the last
   24 hours as a chart, the grid status, operation mode, backup reserve and
   Storm Watch.
+- **Tesla Wall Connector**: charging power, session and total energy, current,
+  the charger's state, the plugged car and the session duration. No button: the
+  charger's local API only reads.
 
 ## Scenes
 
-Triggers (each one optionally limited to one car or one energy site):
+Triggers (each one optionally limited to one car, charger or energy site):
 
 - **Tesla started charging**, **Tesla charging complete**,
-  **Tesla plugged in**, **Tesla unplugged** — with the battery level.
+  **Tesla plugged in**, **Tesla unplugged** — seen by a car (with its battery
+  level) or by a Wall Connector (with the session energy, in kWh).
 - **Grid outage (Powerwall)** and **Grid restored (Powerwall)** — with the
   Powerwall charge, and whether the outage is an intentional "go off-grid".
 
@@ -180,6 +232,10 @@ up; the command goes on and its result shows when the car answers.
   only (every 30 or 60 minutes while awake).
 - Feature names are set when the device is created and do not follow later
   language changes.
+- The Wall Connector is read-only: its local API does not start, stop or limit
+  a charge (do it from the car). Only the gen 3 has this local API; the gen 2
+  and the Universal Wall Connector are not supported. Developed without a
+  charger: the power computation and the states await a field check.
 
 ## Troubleshooting
 
@@ -192,5 +248,8 @@ up; the command goes on and its result shows when the car answers.
 - **Car values only change every 30 minutes**: the car does not stream. Check
   that streaming is on for it in the Teslemetry console and that its software
   is up to date.
+- **A Wall Connector does not answer**: check its IP address in your router and
+  that it is on the Wi-Fi; click **Test the Wall
+  Connectors**. Gladys must be on the same network.
 - The integration logs everything it does: open its logs from the Gladys UI,
   with `LOG_LEVEL=debug` for the full detail. Tokens are never logged.

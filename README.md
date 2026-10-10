@@ -1,15 +1,19 @@
-# Tesla for Gladys Assistant (via Teslemetry)
+# Tesla for Gladys Assistant (Teslemetry and Wall Connector)
 
 A [Gladys Assistant](https://gladysassistant.com) external integration for
 **Tesla cars, Powerwall and solar**, through
-[Teslemetry](https://teslemetry.com), a relay of the official Tesla Fleet API.
+[Teslemetry](https://teslemetry.com), a relay of the official Tesla Fleet API,
+and for the **Tesla Wall Connector gen 3**, read locally on the home network
+with no account and no subscription.
 
 > **Developed without the hardware: feedback welcome.** No car, Powerwall or
 > Teslemetry account was used. The tests run on fixtures adapted from the test
 > data of the Home Assistant Teslemetry integration and of the
 > `teslemetry-stream` library, completed by hand after the Tesla Fleet API
-> documentation (anonymized: fake VINs, identifiers and names). Reports from
-> owners are very welcome on the Gladys forum.
+> documentation (anonymized: fake VINs, identifiers and names). The Wall
+> Connector support was built without a charger, on the sample answers of the
+> `tesla-wall-connector` library's tests (anonymized serial numbers and
+> addresses). Reports from owners are very welcome on the Gladys forum.
 
 **Not affiliated with Tesla, Inc. or Teslemetry.** Tesla, Powerwall, Model 3,
 Model Y, Model S, Model X and Cybertruck are trademarks of Tesla, Inc.
@@ -32,9 +36,16 @@ index (off by default, to avoid counting the house twice next to a utility
 meter) feeds the Gladys energy dashboard (30-minute consumption and cost are
 derived by Gladys).
 
-**Dashboard widgets** (Gladys 5.1+): a _Tesla vehicle_ card and a _Tesla energy
-flow_ card. **Scene triggers**: charging started / complete, plugged in /
-unplugged, grid outage / restored. **Scene action**: set the Powerwall backup
+**Wall Connector gen 3** (local, works without Teslemetry): connector and
+charging state, status text, charging power, session energy, a lifetime kWh
+index for the Gladys energy dashboard, grid voltage, vehicle current, handle
+temperature. Read every 15 s on the home network; identified by its serial
+number, not its IP address. Read-only (its local API takes no command).
+
+**Dashboard widgets** (Gladys 5.1+): a _Tesla vehicle_ card, a _Tesla energy
+flow_ card and a _Tesla Wall Connector_ card. **Scene triggers**: charging
+started / complete, plugged in / unplugged (from a car or a Wall Connector),
+grid outage / restored. **Scene action**: set the Powerwall backup
 reserve.
 
 The user documentation, with the full feature list, the setup and the costs, is
@@ -44,16 +55,18 @@ links to it from the integration's Configuration screen.
 ## Prerequisites
 
 - Gladys **5.1.0** or later.
-- A Teslemetry account (paid subscription per vehicle and per energy site)
+- Wall Connector only: its IP address on the home network, nothing else.
+- Cars and energy sites: a Teslemetry account (paid subscription per vehicle and per energy site)
   linked to the Tesla account, and an access token from the Teslemetry
   console.
 - For commands, the Teslemetry virtual key installed on each car.
 
 ## Installation
 
-From Gladys: **Integrations → Store → Tesla → Install**, then paste the
-Teslemetry access token in the **Configuration** tab and add the discovered
-devices from the **Discovery** tab.
+From Gladys: **Integrations → Store → Tesla → Install**, then, in the
+**Configuration** tab, paste the Teslemetry access token and/or the Wall
+Connector addresses, and add the discovered devices from the **Discovery**
+tab.
 
 ## How it works
 
@@ -77,6 +90,12 @@ Teslemetry handles all of it behind a single token.
   that do not exist yet).
 - Cumulative **energy indexes** are rebuilt from the daily totals and
   persisted under `/data`, so a restart never resets them.
+- **Wall Connectors** answer `http://<address>/api/1/vitals`, `/lifetime` and
+  `/version` on the home network, without authentication (gen 3 firmware). The
+  client repairs the firmware's known JSON glitches (`nan` values, a missing
+  closing brace), reads every 15 s, flags a charger unreachable after 3 missed
+  reads (transport badge), and publishes the device under its serial number.
+  Without a Teslemetry token, no Teslemetry client nor stream is started.
 
 ```
 index.js                   SDK wiring only
@@ -85,12 +104,14 @@ src/teslemetry/client.js   REST client (errors classified, token never logged)
 src/teslemetry/stream.js   SSE client (reconnect with backoff, idle timeout)
 src/devices/vehicle.js     car features, parsing (vehicle_data + stream), commands
 src/devices/energySite.js  energy site features, parsing (live_status, site_info)
+src/devices/wallConnector.js  Wall Connector features, power, charge session states
+src/wallConnector/client.js   Wall Connector local HTTP client (JSON quirks, addresses)
 src/energyIndex.js         cumulative kWh indexes from daily totals
 src/widgets.js             dashboard widgets
 src/scenes.js              scene action
 src/triggers.js            scene triggers (transitions)
 src/store.js               JSON persistence under /data
-test/                      node --test, fixtures in test/fixtures/teslemetry/
+test/                      node --test, fixtures in test/fixtures/{teslemetry,wall-connector}/
 ```
 
 ## Development
@@ -104,7 +125,8 @@ npx -y github:GladysAssistant/integration-store .   # store admission checks
 ```
 
 `test/gladys-rules.test.js` checks every discovered device (several car models,
-Powerwall 2 and 3, with and without solar) against the feature table of the
+Powerwall 2 and 3, with and without solar, Wall Connectors in Europe and North
+America, with and without a Teslemetry token) against the feature table of the
 Gladys core (`test/fixtures/gladys-feature-table.json`). Tests never touch the
 network. To run against a real Gladys:
 
@@ -141,6 +163,11 @@ versions by hand.
   [`teslemetry-stream`](https://github.com/Teslemetry/python-teslemetry-stream)
   Python libraries (Apache 2.0, Brett Adams / Teslemetry). Fixtures derived from their tests
   are anonymized (fake VINs, identifiers and names).
+- The Wall Connector local API, its quirks and test answers follow the
+  [`tesla-wall-connector`](https://github.com/einarhauks/tesla-wall-connector)
+  Python library (MIT, Einar Bragi Hauksson) and the
+  [Home Assistant Tesla Wall Connector integration](https://github.com/home-assistant/core/tree/dev/homeassistant/components/tesla_wall_connector)
+  (Apache 2.0, @einarhauks, @sarabveer and the Home Assistant contributors).
 - Tesla Fleet API documentation: <https://developer.tesla.com/docs/fleet-api>.
 
 ## License

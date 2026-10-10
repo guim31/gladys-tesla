@@ -17,7 +17,7 @@ import { DEFAULT_CONFIG } from '../src/config.js';
 const SCENE_ACTIONS = createSceneActions({});
 const WIDGETS = createWidgets({});
 // Manifest actions registered in index.js.
-const HANDLED_ACTIONS = ['test_connection'];
+const HANDLED_ACTIONS = ['test_connection', 'test_wall_connector'];
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -208,7 +208,8 @@ test('field placeholders are multi-language objects', () => {
 test('the manifest identifies the Tesla integration', () => {
   assert.equal(manifest.name, 'Tesla');
   assert.ok(manifest.docker_image.startsWith('ghcr.io/guim31/gladys-tesla:'));
-  assert.deepEqual(manifest.transports, ['cloud']);
+  // Teslemetry (cloud) and the Wall Connector read on the home network (local).
+  assert.deepEqual(manifest.transports, ['local', 'cloud']);
   for (const text of Object.values(manifest.description)) {
     assert.match(text, /Teslemetry/, 'the catalog description names Teslemetry');
   }
@@ -270,6 +271,52 @@ test('widget, trigger and action keys are stable English snake_case', () => {
     'vehicle_plugged_in',
     'vehicle_unplugged',
   ]);
-  assert.deepEqual(keysOf(manifest.widgets), ['vehicle', 'energy_flow']);
+  assert.deepEqual(keysOf(manifest.widgets), ['vehicle', 'energy_flow', 'wall_connector']);
   assert.deepEqual(keysOf(manifest.scene_actions), ['set_backup_reserve']);
+});
+
+test('every key published in 1.0.1 is still there (keys are forever)', () => {
+  // Users store these keys (configuration, scenes, dashboards): a later
+  // version may only add to them.
+  const published = {
+    config_schema: [
+      'intro',
+      'access_token',
+      'units',
+      'language',
+      'vehicle_refresh_minutes',
+      'home_energy_index',
+    ],
+    actions: ['test_connection'],
+    scene_triggers: [
+      'charging_started',
+      'charging_complete',
+      'vehicle_plugged_in',
+      'vehicle_unplugged',
+      'grid_outage',
+      'grid_restored',
+    ],
+    scene_actions: ['set_backup_reserve'],
+    widgets: ['vehicle', 'energy_flow'],
+  };
+  for (const [field, keys] of Object.entries(published)) {
+    const current = keysOf(manifest[field]);
+    for (const key of keys) assert.ok(current.includes(key), `${field}.${key} disappeared`);
+  }
+  for (const trigger of manifest.scene_triggers) {
+    assert.ok(
+      keysOf(trigger.variables).includes('battery_level') || trigger.key.startsWith('grid_'),
+      `${trigger.key}: variable battery_level disappeared`,
+    );
+  }
+  const vehicleRefresh = manifest.config_schema.find((f) => f.key === 'vehicle_refresh_minutes');
+  assert.equal(vehicleRefresh.default, '30');
+});
+
+test('the Teslemetry token is optional: a Wall Connector works without it', () => {
+  const token = manifest.config_schema.find((f) => f.key === 'access_token');
+  assert.equal(token.required, false);
+  const hosts = manifest.config_schema.find((f) => f.key === 'wall_connectors');
+  assert.equal(hosts.type, 'string');
+  assert.equal(hosts.required, false);
 });

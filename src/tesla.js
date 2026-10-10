@@ -13,10 +13,14 @@
 //      products list (online/asleep) every 15 minutes and the energy sites
 //      every 10 minutes.
 // A sleeping car is never read nor woken; only a user command wakes it.
+//
+// Wall Connectors are read on the home network every 15 s, with or without a
+// Teslemetry token: an installation with only chargers configured publishes
+// only them.
 // -----------------------------------------------------------------------------
 
-import { createLogger } from '@gladysassistant/integration-sdk';
-import { vehicleRefreshMs } from './config.js';
+import { DEVICE_TRANSPORTS, createLogger } from '@gladysassistant/integration-sdk';
+import { vehicleRefreshMs, wallConnectorHosts } from './config.js';
 import { ERROR_KINDS, createTeslemetryClient } from './teslemetry/client.js';
 import { createTeslemetryStream } from './teslemetry/stream.js';
 import {
@@ -43,6 +47,15 @@ import {
   snapshotFromLiveStatus,
   snapshotFromSiteInfo,
 } from './devices/energySite.js';
+import {
+  EVSE_STATES,
+  buildWallConnectorDevice,
+  sessionState,
+  wallConnectorIds,
+  wallConnectorStates,
+  wallConnectorTemperatureUnit,
+} from './devices/wallConnector.js';
+import { createWallConnectorClient } from './wallConnector/client.js';
 import { createIndexState, currentIndex, recordDailyTotal } from './energyIndex.js';
 import { siteTransitions, vehicleTransitions } from './triggers.js';
 import { vehicleUnits } from './units.js';
@@ -54,9 +67,18 @@ const SITE_INFO_FALLBACK_MS = 60 * MINUTE;
 const CREDITS_BACKOFF_MS = 60 * MINUTE;
 const MAX_STATES_PER_REQUEST = 100;
 const WIDGET_NUDGE_MIN_INTERVAL_MS = 10 * 1000;
+// Wall Connector: vitals every 15 s, lifetime counters every minute, and
+// "unreachable" only after 3 missed reads in a row (a slow answer is common).
+export const WALL_CONNECTOR_POLL_MS = 15 * 1000;
+const WALL_CONNECTOR_LIFETIME_MS = MINUTE;
+const WALL_CONNECTOR_MAX_FAILURES = 3;
 
 // Widget keys (manifest `widgets`), nudged when their computed rows change.
-export const WIDGET_KEYS = { VEHICLE: 'vehicle', ENERGY_FLOW: 'energy_flow' };
+export const WIDGET_KEYS = {
+  VEHICLE: 'vehicle',
+  ENERGY_FLOW: 'energy_flow',
+  WALL_CONNECTOR: 'wall_connector',
+};
 
 // Snapshot fields shown by the widgets outside of device-bound tiles.
 const VEHICLE_WIDGET_FIELDS = [
@@ -79,8 +101,16 @@ const VEHICLE_STRUCTURE_FIELDS = ['distanceUnit', 'temperatureUnit'];
 
 export const STATUS_MESSAGES = {
   noToken: {
-    en: 'Enter your Teslemetry access token to connect.',
-    fr: "Saisissez votre jeton d'accès Teslemetry pour vous connecter.",
+    en: 'Enter your Teslemetry access token, or the address of a Wall Connector, to connect.',
+    fr: "Saisissez votre jeton d'accès Teslemetry, ou l'adresse d'une Wall Connector, pour vous connecter.",
+  },
+  wallConnectorsOnly: {
+    en: 'No Teslemetry token: only the Wall Connectors are used.',
+    fr: 'Pas de jeton Teslemetry : seules les Wall Connector sont utilisées.',
+  },
+  wallConnectorsUnreachable: {
+    en: 'No Wall Connector answers on the home network: check the addresses.',
+    fr: 'Aucune Wall Connector ne répond sur le réseau local : vérifiez les adresses.',
   },
   [ERROR_KINDS.AUTH]: {
     en: 'Teslemetry refused the access token: check it in the configuration.',
@@ -106,6 +136,7 @@ export function createTesla({
   logger = createLogger({ name: 'tesla' }),
   clientFactory = createTeslemetryClient,
   streamFactory = createTeslemetryStream,
+  wallClientFactory = createWallConnectorClient,
   now = Date.now,
 }) {
   let config = null;
@@ -121,10 +152,14 @@ export function createTesla({
   const published = new Map(); // feature external_id → serialized value
   const nudges = new Map(); // widget key → { at, timer }
   const streamingChecked = new Set();
+  // host → { host, client, serial, version, vitals, energyKwh, reachable, failures, lastLifetimeAt }
+  const wallConnectors = new Map();
+  let wallTimer = null;
 
   // --- Helpers ---------------------------------------------------------------
 
   const persisted = () => store.data;
+  const persistedWallConnectors = () => (store.data.wallConnectors ??= {});
 
   function createdDevice(externalId) {
     return (gladys.devices ?? []).find((device) => device.external_id === externalId);
@@ -156,6 +191,23 @@ export function createTesla({
       siteInfo: site.siteInfo,
       homeEnergyIndex: config.home_energy_index,
     });
+  }
+
+  function wallConnectorDevice(wc) {
+    const several = [...wallConnectors.values()].filter((w) => w.serial).length > 1;
+    return buildWallConnectorDevice(gladys, wc.version ?? { serial_number: wc.serial }, {
+      language: config.language,
+      temperatureUnit: wallConnectorTemperatureUnit(config.units, wc.vitals),
+      // Several chargers: tell them apart by the end of their serial number.
+      name: several ? `Tesla Wall Connector ${String(wc.serial).slice(-4)}` : undefined,
+    });
+  }
+
+  function findWallConnector(deviceExternalId) {
+    for (const wc of wallConnectors.values()) {
+      if (wc.serial && wallConnectorIds(gladys, wc.serial).device === deviceExternalId) return wc;
+    }
+    return null;
   }
 
   function findVehicle(deviceExternalId) {
@@ -253,13 +305,43 @@ export function createTesla({
     return publishChanged(ids.device, states, options);
   }
 
+  async function publishWallConnector(wc, options) {
+    if (!wc.serial) return 0;
+    const built = wallConnectorDevice(wc);
+    const states = wallConnectorStates(wc, {
+      language: config.language,
+      temperatureUnit: unitResolver(built.external_id, built)('handle-temperature'),
+    });
+    return publishChanged(built.external_id, states, options);
+  }
+
+  async function publishWallConnectorTransports() {
+    const entries = [...wallConnectors.values()]
+      .filter((wc) => wc.serial)
+      .map((wc) => ({
+        external_id: wallConnectorIds(gladys, wc.serial).device,
+        transport: wc.reachable === false ? DEVICE_TRANSPORTS.UNREACHABLE : DEVICE_TRANSPORTS.LOCAL,
+      }));
+    if (entries.length === 0) return;
+    try {
+      await gladys.publishTransports(entries);
+    } catch (err) {
+      logger.warn(`Publishing the Wall Connector transports failed: ${err.message}`);
+    }
+  }
+
   async function publishAll(options) {
     for (const vehicle of vehicles.values()) await publishVehicle(vehicle, options);
     for (const site of sites.values()) await publishSite(site, options);
+    for (const wc of wallConnectors.values()) await publishWallConnector(wc, options);
   }
 
   function buildDevices() {
-    return [...[...vehicles.values()].map(vehicleDevice), ...[...sites.values()].map(siteDevice)];
+    return [
+      ...[...vehicles.values()].map(vehicleDevice),
+      ...[...sites.values()].map(siteDevice),
+      ...[...wallConnectors.values()].filter((wc) => wc.serial).map(wallConnectorDevice),
+    ];
   }
 
   async function publishDevices({ force = false } = {}) {
@@ -576,6 +658,149 @@ export function createTesla({
     stream.start();
   }
 
+  // --- Wall Connectors (local) ----------------------------------------------
+
+  /** The serial a host had last time (its device survives an offline restart). */
+  function rememberedSerial(host) {
+    const entry = Object.entries(persistedWallConnectors()).find(([, v]) => v.host === host);
+    return entry ? entry[0] : null;
+  }
+
+  async function applyWallConnector(wc, { vitals, energyWh, reachable }) {
+    const previous = { vitals: wc.vitals, reachable: wc.reachable };
+    if (vitals) wc.vitals = vitals;
+    if (reachable !== undefined) wc.reachable = reachable;
+    const memory = persistedWallConnectors()[wc.serial] ?? {};
+    let memoryChanged = memory.host !== wc.host;
+    const next = { ...memory, host: wc.host };
+    // The lifetime counter only grows: hold a lower reading (a firmware glitch)
+    // rather than publish what Gladys would read as a meter reset.
+    if (Number.isFinite(energyWh) && energyWh > 0) {
+      const kwh = Math.round(energyWh) / 1000;
+      if (!(Number.isFinite(memory.energyKwh) && kwh < memory.energyKwh)) {
+        if (kwh !== memory.energyKwh) memoryChanged = true;
+        next.energyKwh = kwh;
+      }
+    }
+    wc.energyKwh = next.energyKwh ?? null;
+    // Scene triggers: the cars' charge-session transitions, read on the charger.
+    let transitions = [];
+    const session = vitals ? sessionState(vitals) : null;
+    if (session) {
+      transitions = vehicleTransitions(
+        { chargingState: memory.chargingState },
+        { chargingState: session },
+      );
+      if (session !== memory.chargingState) {
+        next.chargingState = session;
+        memoryChanged = true;
+      }
+    }
+    if (memoryChanged) {
+      persistedWallConnectors()[wc.serial] = next;
+      store.touch();
+    }
+    await publishWallConnector(wc);
+    if (transitions.length) {
+      const sessionWh = Number(wc.vitals?.session_energy_wh);
+      await fireTriggers(transitions, {
+        device: wallConnectorIds(gladys, wc.serial).device,
+        battery_level: null,
+        session_energy: Number.isFinite(sessionWh) ? Math.round(sessionWh / 10) / 100 : null,
+      });
+    }
+    if (previous.reachable !== wc.reachable) {
+      await publishWallConnectorTransports();
+      // Without Teslemetry, the chargers are the whole connection status.
+      if (!config.access_token) await reportWallConnectorStatus();
+    }
+    if (
+      previous.reachable !== wc.reachable ||
+      previous.vitals?.evse_state !== wc.vitals?.evse_state ||
+      previous.vitals?.vehicle_connected !== wc.vitals?.vehicle_connected
+    ) {
+      nudgeWidget(WIDGET_KEYS.WALL_CONNECTOR);
+    }
+  }
+
+  async function reportWallConnectorStatus() {
+    const all = [...wallConnectors.values()];
+    if (all.some((wc) => wc.reachable)) await setStatus(true);
+    else await setStatus(false, STATUS_MESSAGES.wallConnectorsUnreachable);
+  }
+
+  /** One read of a charger: vitals, plus its identity and counters when due. */
+  async function pollWallConnector(wc) {
+    try {
+      if (!wc.version) {
+        wc.version = await wc.client.version();
+        if (!wc.version?.serial_number) throw new Error('no serial number in /api/1/version');
+        const known = wc.serial;
+        wc.serial = String(wc.version.serial_number);
+        if (known !== wc.serial) logger.info(`Wall Connector found at ${wc.host}`);
+      }
+      const vitals = await wc.client.vitals();
+      let energyWh;
+      if (now() - wc.lastLifetimeAt >= WALL_CONNECTOR_LIFETIME_MS) {
+        energyWh = Number((await wc.client.lifetime())?.energy_wh);
+        wc.lastLifetimeAt = now();
+      }
+      wc.failures = 0;
+      const firstValues = !wc.vitals;
+      await applyWallConnector(wc, { vitals, energyWh, reachable: true });
+      // The structure follows the grid (°F on a 60 Hz supply in "auto"), and a
+      // charger seen for the first time joins the Discovery screen.
+      if (firstValues) await publishDevices().catch((err) => logger.warn(err.message));
+      return true;
+    } catch (err) {
+      wc.failures += 1;
+      if (wc.failures === 1 || wc.failures === WALL_CONNECTOR_MAX_FAILURES) {
+        logger.warn(`Wall Connector ${wc.host}: ${err.message}`);
+      }
+      if (wc.serial && wc.failures >= WALL_CONNECTOR_MAX_FAILURES && wc.reachable !== false) {
+        await applyWallConnector(wc, { reachable: false });
+      }
+      return false;
+    }
+  }
+
+  // Several unreachable chargers (10 s timeout each) can outlast the 15 s
+  // period: a round still running makes the next one skip.
+  let wallPolling = null;
+  async function pollWallConnectors() {
+    if (wallPolling) return wallPolling;
+    wallPolling = (async () => {
+      for (const wc of wallConnectors.values()) await pollWallConnector(wc);
+    })().finally(() => {
+      wallPolling = null;
+    });
+    return wallPolling;
+  }
+
+  async function startWallConnectors() {
+    for (const host of wallConnectorHosts(config)) {
+      const serial = rememberedSerial(host);
+      wallConnectors.set(host, {
+        host,
+        client: wallClientFactory({ host }),
+        serial,
+        version: null,
+        vitals: null,
+        energyKwh: serial ? (persistedWallConnectors()[serial]?.energyKwh ?? null) : null,
+        reachable: undefined,
+        failures: 0,
+        lastLifetimeAt: 0,
+      });
+    }
+    if (wallConnectors.size === 0) return;
+    await pollWallConnectors();
+    wallTimer = setInterval(
+      () => pollWallConnectors().catch((err) => logger.error('Wall Connector read failed', err)),
+      WALL_CONNECTOR_POLL_MS,
+    );
+    wallTimer.unref?.();
+  }
+
   // --- Fallback ticker -------------------------------------------------------
 
   async function tick() {
@@ -607,6 +832,9 @@ export function createTesla({
   async function stop() {
     clearInterval(ticker);
     ticker = null;
+    clearInterval(wallTimer);
+    wallTimer = null;
+    await wallPolling;
     for (const entry of nudges.values()) clearTimeout(entry.timer);
     nudges.clear();
     await stream?.stop();
@@ -619,9 +847,12 @@ export function createTesla({
 
   async function start(newConfig) {
     config = newConfig;
+    await startWallConnectors();
     if (!config.access_token) {
       await publishDevices({ force: true });
-      await setStatus(false, STATUS_MESSAGES.noToken);
+      await publishWallConnectorTransports();
+      if (wallConnectors.size === 0) await setStatus(false, STATUS_MESSAGES.noToken);
+      else await reportWallConnectorStatus();
       return;
     }
     client = clientFactory({ token: config.access_token });
@@ -640,13 +871,16 @@ export function createTesla({
     /** Resolves once the queued stream events are applied. */
     drain: () => streamQueue,
 
-    /** New configuration: restart when the token changed, else rebuild. */
+    /** New configuration: restart when the token or the chargers changed, else rebuild. */
     async reconfigure(newConfig) {
       const tokenChanged = !config || newConfig.access_token !== config.access_token;
-      if (tokenChanged) {
+      const hostsChanged =
+        !config || wallConnectorHosts(newConfig).join(',') !== wallConnectorHosts(config).join(',');
+      if (tokenChanged || hostsChanged) {
         await stop();
         vehicles.clear();
         sites.clear();
+        wallConnectors.clear();
         published.clear();
         streamingChecked.clear();
         publishedDevicesJson = null;
@@ -664,10 +898,12 @@ export function createTesla({
       published.clear();
       await publishDevices({ force: true });
       await publishAll({ force: true });
+      await publishWallConnectorTransports();
       refreshAllWidgets();
     },
 
     async scan() {
+      for (const wc of wallConnectors.values()) if (!wc.serial) await pollWallConnector(wc);
       if (client) await discover();
       else await publishDevices({ force: true });
     },
@@ -681,6 +917,11 @@ export function createTesla({
       if (vehicle) await publishVehicle(vehicle, { force: true });
       const site = findSite(device.external_id);
       if (site) await publishSite(site, { force: true });
+      const wc = findWallConnector(device.external_id);
+      if (wc) {
+        await publishWallConnector(wc, { force: true });
+        await publishWallConnectorTransports();
+      }
       refreshAllWidgets();
     },
 
@@ -690,6 +931,8 @@ export function createTesla({
       if (vehicle) await publishVehicle(vehicle, { force: true });
       const site = findSite(device.external_id);
       if (site) await publishSite(site, { force: true });
+      const wc = findWallConnector(device.external_id);
+      if (wc) await publishWallConnector(wc, { force: true });
     },
 
     /**
@@ -717,6 +960,9 @@ export function createTesla({
     },
 
     async runCommand(device, feature, value) {
+      if (findWallConnector(device.external_id)) {
+        throw new Error('The Wall Connector local API is read-only');
+      }
       if (!client) throw new Error('Teslemetry is not configured');
       const key = feature.external_id.slice(device.external_id.length + 1);
       const vehicle = findVehicle(device.external_id);
@@ -761,9 +1007,44 @@ export function createTesla({
       return order.body.backup_reserve_percent;
     },
 
+    /** Wall Connector test (manifest action): what each configured address answers. */
+    async testWallConnectors() {
+      const hosts = config ? wallConnectorHosts(config) : [];
+      if (hosts.length === 0) {
+        return {
+          en: 'No Wall Connector address in the configuration.',
+          fr: 'Aucune adresse de Wall Connector dans la configuration.',
+        };
+      }
+      const lines = { en: [], fr: [] };
+      for (const host of hosts) {
+        const probe = wallClientFactory({ host });
+        try {
+          const version = await probe.version();
+          const vitals = await probe.vitals();
+          const state = EVSE_STATES[vitals?.evse_state];
+          const serial = String(version?.serial_number ?? '?');
+          lines.en.push(
+            `${host}: Wall Connector …${serial.slice(-4)}, firmware ${version?.firmware_version ?? '?'}, ${state?.en ?? `state ${vitals?.evse_state}`}.`,
+          );
+          lines.fr.push(
+            `${host} : Wall Connector …${serial.slice(-4)}, firmware ${version?.firmware_version ?? '?'}, ${state?.fr ?? `état ${vitals?.evse_state}`}.`,
+          );
+        } catch (err) {
+          lines.en.push(`${host}: no answer (${err.message}).`);
+          lines.fr.push(`${host} : pas de réponse (${err.message}).`);
+        }
+      }
+      return { en: lines.en.join('\n'), fr: lines.fr.join('\n') };
+    },
+
     /** Connection test (manifest action): a short human summary. */
     async testConnection() {
-      if (!config?.access_token) return STATUS_MESSAGES.noToken;
+      if (!config?.access_token) {
+        return wallConnectorHosts(config ?? {}).length
+          ? STATUS_MESSAGES.wallConnectorsOnly
+          : STATUS_MESSAGES.noToken;
+      }
       const probe = client ?? clientFactory({ token: config.access_token });
       try {
         const products = (await probe.products()) ?? [];
@@ -812,6 +1093,17 @@ export function createTesla({
         product: site.product,
       };
     },
+    wallConnectorView(deviceExternalId) {
+      const wc = findWallConnector(deviceExternalId);
+      if (!wc) return null;
+      return {
+        device: wallConnectorDevice(wc),
+        vitals: wc.vitals ?? {},
+        reachable: wc.reachable !== false,
+        energyKwh: wc.energyKwh,
+      };
+    },
+    pollWallConnectors,
     get streamConnected() {
       return streamConnected;
     },

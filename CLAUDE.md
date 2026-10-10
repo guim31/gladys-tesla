@@ -140,6 +140,10 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   dérive pas la production 30 min (le `energy_parent_id` exigé est un id de base, inconnu du
   conteneur). L'index de consommation est rattaché par défaut au compteur principal : le dire
   dans la doc quand l'appareil mesure toute la maison (sinon double comptage avec un Linky).
+- **Index d'une charge ou de toute la maison** : un index de consommation est rattaché au
+  compteur principal comme sous-compteur. Pour une charge (borne de recharge, prise), c'est juste ;
+  pour un appareil qui mesure **toute** la maison (Powerwall, onduleur), c'est un double comptage à
+  côté d'un Linky : le rendre optionnel.
 - **`battery-storage` n'a pas de puissance signée** : `charge-power` et `discharge-power`, toutes
   deux ≥ 0. Une puissance signée (Powerwall, onduleurs hybrides) se répartit sur les deux.
   `grid-sensor/power`, lui, est signé (soutirage +, injection −).
@@ -185,6 +189,11 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
+- **Cibler la dernière version publiée de Gladys (5.1.4 au 10/10/2026)**, pas `master` : vérifier
+  qu'une capacité du cœur y est avec `git tag --contains <commit>` sur un clone du dépôt Gladys
+  (`git clone --filter=blob:none --no-checkout`, puis `git log -S`). Dans 5.1.4, une action de
+  bouton de widget ne garde que `key`, `params` et `confirm` : **pas de `fields`** (le formulaire
+  derrière un bouton, documenté par le SDK, est postérieur).
 
 ## SDK et tests
 
@@ -201,6 +210,17 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   corrige pas autrement : le prochain push relance la CI.
 - Le proxy des sessions de code refuse aussi `teslemetry.com` et `api.teslemetry.com` : ni la
   doc ni les tarifs ne se lisent directement, seulement via la recherche web.
+
+## Tesla Wall Connector (API locale)
+
+- Gen 3 seulement : `http://<ip>/api/1/vitals`, `/lifetime`, `/version`, `/wifi_status`, sans
+  authentification, en lecture seule. Le firmware écrit parfois `nan` (pas du JSON) et oublie
+  parfois l'accolade finale : réparer avant `JSON.parse`. Il peut mettre plusieurs secondes à
+  répondre (délai de 10 s).
+- Pas de puissance dans `vitals` : la calculer par phase (triphasé), ou tension réseau × courant
+  véhicule sur le biphasé nord-américain (réseau à 60 Hz ; Home Assistant le demande à
+  l'utilisateur).
+- Identifier la borne par son numéro de série (`/version`), jamais par son IP (DHCP).
 
 ## Store
 

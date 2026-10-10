@@ -26,12 +26,13 @@ export function vehicleTransitions(previous, next) {
   const before = previous.chargingState;
   const after = next.chargingState;
   if (before && after && before !== after) {
+    // In the order things happen: plugged in, then charging.
+    if (before === 'Disconnected') events.push(SCENE_TRIGGERS.VEHICLE_PLUGGED_IN);
     if (after === 'Charging' && before !== 'Starting') events.push(SCENE_TRIGGERS.CHARGING_STARTED);
     if (after === 'Starting') events.push(SCENE_TRIGGERS.CHARGING_STARTED);
     if (after === 'Complete' && before !== 'Disconnected') {
       events.push(SCENE_TRIGGERS.CHARGING_COMPLETE);
     }
-    if (before === 'Disconnected') events.push(SCENE_TRIGGERS.VEHICLE_PLUGGED_IN);
     if (after === 'Disconnected') events.push(SCENE_TRIGGERS.VEHICLE_UNPLUGGED);
   }
   return events;
