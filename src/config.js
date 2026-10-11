@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------------
 
 export const UNIT_SYSTEMS = { AUTO: 'auto', METRIC: 'metric', IMPERIAL: 'imperial' };
-export const LANGUAGES = ['en', 'fr'];
+export const LANGUAGES = ['en', 'fr', 'de', 'es'];
 // Minutes between two fallback vehicle_data reads ('0' = streaming only).
 // No faster choice: reading an awake car that often may keep it from falling
 // asleep, and drain its battery.
