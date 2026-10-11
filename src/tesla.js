@@ -81,26 +81,44 @@ export const STATUS_MESSAGES = {
   noToken: {
     en: 'Enter your Teslemetry access token to connect.',
     fr: "Saisissez votre jeton d'accès Teslemetry pour vous connecter.",
+    de: 'Gib dein Teslemetry-Zugriffstoken ein, um dich zu verbinden.',
+    es: 'Introduzca su token de acceso de Teslemetry para conectarse.',
   },
   [ERROR_KINDS.AUTH]: {
     en: 'Teslemetry refused the access token: check it in the configuration.',
     fr: "Teslemetry a refusé le jeton d'accès : vérifiez-le dans la configuration.",
+    de: 'Teslemetry hat das Zugriffstoken abgelehnt: Prüfe es in der Konfiguration.',
+    es: 'Teslemetry ha rechazado el token de acceso: compruébelo en la configuración.',
   },
   [ERROR_KINDS.SUBSCRIPTION]: {
     en: 'Teslemetry answers that a subscription is required for this account.',
     fr: 'Teslemetry indique qu’un abonnement est nécessaire pour ce compte.',
+    de: 'Teslemetry meldet, dass für dieses Konto ein Abonnement nötig ist.',
+    es: 'Teslemetry indica que esta cuenta necesita una suscripción.',
   },
   [ERROR_KINDS.FORBIDDEN]: {
     en: 'The Teslemetry token lacks a permission (scope): create it with vehicle and energy access.',
     fr: 'Il manque une autorisation au jeton Teslemetry : créez-le avec les accès véhicule et énergie.',
+    de: 'Dem Teslemetry-Token fehlt eine Berechtigung (Scope): Erstelle es mit Fahrzeug- und Energiezugriff.',
+    es: 'Al token de Teslemetry le falta un permiso (scope): créelo con acceso a vehículos y energía.',
   },
   unreachable: {
     en: 'Teslemetry is unreachable for now, retrying.',
     fr: 'Teslemetry est injoignable pour le moment, nouvel essai en cours.',
+    de: 'Teslemetry ist gerade nicht erreichbar, neuer Versuch läuft.',
+    es: 'Teslemetry no está disponible por ahora, reintentando.',
+  },
+  initFailed: {
+    en: 'Initialization failed, check the integration logs.',
+    fr: "L'initialisation a échoué, consultez les logs de l'intégration.",
+    de: 'Initialisierung fehlgeschlagen, sieh in den Logs der Integration nach.',
+    es: 'La inicialización ha fallado, consulte los registros de la integración.',
   },
   wallConnectorMoved: {
     en: 'The Wall Connector now has its own integration, Tesla Wall Connector: install it from the store.',
     fr: 'La borne a maintenant sa propre intégration, Tesla Wall Connector : installez-la depuis le store.',
+    de: 'Der Wall Connector hat jetzt eine eigene Integration, Tesla Wall Connector: Installiere sie aus dem Store.',
+    es: 'El Wall Connector tiene ahora su propia integración, Tesla Wall Connector: instálela desde la tienda.',
   },
 };
 
@@ -186,7 +204,9 @@ export function createTesla({
   async function setStatus(connected, message) {
     if (movedNotice) {
       message = message
-        ? { en: `${movedNotice.en} ${message.en}`, fr: `${movedNotice.fr} ${message.fr}` }
+        ? Object.fromEntries(
+            Object.keys(movedNotice).map((lang) => [lang, `${movedNotice[lang]} ${message[lang]}`]),
+          )
         : movedNotice;
     }
     try {
@@ -809,18 +829,22 @@ export function createTesla({
           (p) => p.energy_site_id !== undefined && isUsefulSite(p),
         ).length;
         const live = streamConnected
-          ? { en: 'connected', fr: 'connecté' }
-          : { en: 'not connected', fr: 'non connecté' };
+          ? { en: 'connected', fr: 'connecté', de: 'verbunden', es: 'conectado' }
+          : { en: 'not connected', fr: 'non connecté', de: 'nicht verbunden', es: 'no conectado' };
         const balance =
           credits?.balance !== undefined
             ? {
                 en: ` Credit balance: ${credits.balance}.`,
                 fr: ` Solde de crédits : ${credits.balance}.`,
+                de: ` Guthaben: ${credits.balance}.`,
+                es: ` Saldo de créditos: ${credits.balance}.`,
               }
-            : { en: '', fr: '' };
+            : { en: '', fr: '', de: '', es: '' };
         return {
           en: `Connected to Teslemetry: ${cars} vehicle(s), ${energy} energy site(s). Real-time stream ${live.en}.${balance.en}`,
           fr: `Connecté à Teslemetry : ${cars} véhicule(s), ${energy} site(s) d'énergie. Flux temps réel ${live.fr}.${balance.fr}`,
+          de: `Mit Teslemetry verbunden: ${cars} Fahrzeug(e), ${energy} Energiestandort(e). Echtzeit-Stream ${live.de}.${balance.de}`,
+          es: `Conectado a Teslemetry: ${cars} vehículo(s), ${energy} sitio(s) de energía. Flujo en tiempo real ${live.es}.${balance.es}`,
         };
       } catch (err) {
         const message = STATUS_MESSAGES[err.kind] ?? STATUS_MESSAGES.unreachable;

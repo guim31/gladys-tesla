@@ -335,7 +335,8 @@ test('every published key is still there, but for the Wall Connector, moved out 
   ]) {
     const trigger = manifest.scene_triggers.find((t) => t.key === key);
     assert.deepEqual(keysOf(trigger.variables), ['battery_level'], key);
-    assert.deepEqual(trigger.fields[0].label, { en: 'Vehicle', fr: 'Véhicule' }, key);
+    assert.deepEqual(keysOf(trigger.fields), ['device'], key);
+    assert.equal(trigger.fields[0].label.en, 'Vehicle', key);
   }
   const token = manifest.config_schema.find((f) => f.key === 'access_token');
   assert.equal(token.required, true, 'the Teslemetry token is required again');

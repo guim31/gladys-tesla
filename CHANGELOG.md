@@ -10,6 +10,13 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- German and Spanish: the configuration, the widgets, the scene triggers and
+  actions, and the connection messages follow the Gladys interface in these
+  two languages too, and the _Device names language_ setting offers German and
+  Spanish feature names for new devices.
+
 ## [1.2.0] - 2026-10-10
 
 ### Changed

@@ -23,7 +23,7 @@ test('a pasted token is cleaned, unknown choices fall back', () => {
   const config = normalizeConfig({
     access_token: '  Bearer abc123\n',
     units: 'furlongs',
-    language: 'de',
+    language: 'it',
     vehicle_refresh_minutes: 7,
   });
   assert.equal(config.access_token, 'abc123');

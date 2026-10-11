@@ -4,7 +4,9 @@
   "name": "Teslemetry",
   "description": {
     "en": "Tesla cars and Powerwall through Teslemetry: charging, climate, locks, solar, energy flows.",
-    "fr": "Voitures Tesla et Powerwall via Teslemetry : charge, clim, verrous, solaire, flux d'énergie."
+    "fr": "Voitures Tesla et Powerwall via Teslemetry : charge, clim, verrous, solaire, flux d'énergie.",
+    "de": "Tesla-Autos und Powerwall über Teslemetry: Laden, Klima, Schlösser, Solar, Energieflüsse.",
+    "es": "Coches Tesla y Powerwall con Teslemetry: carga, climatización, cierres, solar, flujos de energía."
   },
   "version": "1.2.0",
   "docker_image": "ghcr.io/guim31/gladys-tesla:1.2.0",
@@ -16,39 +18,70 @@
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Before you start", "fr": "Avant de commencer" },
+      "label": {
+        "en": "Before you start",
+        "fr": "Avant de commencer",
+        "de": "Bevor du loslegst",
+        "es": "Antes de empezar"
+      },
       "description": {
         "en": "This integration reaches your Tesla account through Teslemetry, a paid service that relays the official Tesla Fleet API (no Tesla developer account needed). Create a Teslemetry account, link your Tesla account, add the virtual key to your car, then create an access token in the Teslemetry console and paste it below. Reading data never wakes your car; a command sent to a sleeping car wakes it.",
-        "fr": "Cette intégration accède à votre compte Tesla via Teslemetry, un service payant qui relaie l'API Fleet officielle de Tesla (pas de compte développeur Tesla nécessaire). Créez un compte Teslemetry, liez votre compte Tesla, ajoutez la clé virtuelle à votre voiture, puis créez un jeton d'accès dans la console Teslemetry et collez-le ci-dessous. La lecture des données ne réveille jamais la voiture ; une commande envoyée à une voiture endormie la réveille."
+        "fr": "Cette intégration accède à votre compte Tesla via Teslemetry, un service payant qui relaie l'API Fleet officielle de Tesla (pas de compte développeur Tesla nécessaire). Créez un compte Teslemetry, liez votre compte Tesla, ajoutez la clé virtuelle à votre voiture, puis créez un jeton d'accès dans la console Teslemetry et collez-le ci-dessous. La lecture des données ne réveille jamais la voiture ; une commande envoyée à une voiture endormie la réveille.",
+        "de": "Diese Integration greift über Teslemetry auf dein Tesla-Konto zu, einen kostenpflichtigen Dienst, der die offizielle Tesla Fleet API weiterleitet (kein Tesla-Entwicklerkonto nötig). Erstelle ein Teslemetry-Konto, verknüpfe dein Tesla-Konto, füge deinem Auto den virtuellen Schlüssel hinzu, erstelle dann in der Teslemetry-Konsole ein Zugriffstoken und füge es unten ein. Das Lesen der Daten weckt dein Auto nie; ein Befehl an ein schlafendes Auto weckt es.",
+        "es": "Esta integración accede a su cuenta de Tesla a través de Teslemetry, un servicio de pago que retransmite la API Fleet oficial de Tesla (no necesita una cuenta de desarrollador de Tesla). Cree una cuenta de Teslemetry, vincule su cuenta de Tesla, añada la llave virtual a su coche y, a continuación, cree un token de acceso en la consola de Teslemetry y péguelo a continuación. La lectura de datos nunca despierta el coche; un comando enviado a un coche dormido lo despierta."
       },
       "links": [
         {
           "url": "https://teslemetry.com",
-          "label": { "en": "Teslemetry", "fr": "Teslemetry" }
+          "label": {
+            "en": "Teslemetry",
+            "fr": "Teslemetry",
+            "de": "Teslemetry",
+            "es": "Teslemetry"
+          }
         },
         {
           "url": "https://teslemetry.com/pricing",
-          "label": { "en": "Teslemetry pricing", "fr": "Tarifs Teslemetry" }
+          "label": {
+            "en": "Teslemetry pricing",
+            "fr": "Tarifs Teslemetry",
+            "de": "Teslemetry-Preise",
+            "es": "Precios de Teslemetry"
+          }
         }
       ]
     },
     {
       "key": "access_token",
       "type": "secret",
-      "label": { "en": "Teslemetry access token", "fr": "Jeton d'accès Teslemetry" },
+      "label": {
+        "en": "Teslemetry access token",
+        "fr": "Jeton d'accès Teslemetry",
+        "de": "Teslemetry-Zugriffstoken",
+        "es": "Token de acceso de Teslemetry"
+      },
       "description": {
         "en": "Created in the Teslemetry console, with access to your vehicles and energy sites.",
-        "fr": "Créé dans la console Teslemetry, avec l'accès à vos véhicules et sites d'énergie."
+        "fr": "Créé dans la console Teslemetry, avec l'accès à vos véhicules et sites d'énergie.",
+        "de": "In der Teslemetry-Konsole erstellt, mit Zugriff auf deine Fahrzeuge und Energiestandorte.",
+        "es": "Creado en la consola de Teslemetry, con acceso a sus vehículos y sitios de energía."
       },
       "required": true
     },
     {
       "key": "units",
       "type": "select",
-      "label": { "en": "Units", "fr": "Unités" },
+      "label": {
+        "en": "Units",
+        "fr": "Unités",
+        "de": "Einheiten",
+        "es": "Unidades"
+      },
       "description": {
         "en": "Units of the vehicle values (distances, temperatures), as used by scenes. The dashboard always converts to each user's preference.",
-        "fr": "Unités des valeurs du véhicule (distances, températures), telles que les scènes les comparent. Le tableau de bord convertit toujours selon la préférence de chacun."
+        "fr": "Unités des valeurs du véhicule (distances, températures), telles que les scènes les comparent. Le tableau de bord convertit toujours selon la préférence de chacun.",
+        "de": "Einheiten der Fahrzeugwerte (Entfernungen, Temperaturen), so wie Szenen sie vergleichen. Das Dashboard rechnet immer in die Einstellung jedes Benutzers um.",
+        "es": "Unidades de los valores del vehículo (distancias, temperaturas), tal como las comparan las escenas. El panel siempre convierte según la preferencia de cada usuario."
       },
       "required": false,
       "default": "auto",
@@ -57,42 +90,132 @@
           "value": "auto",
           "label": {
             "en": "Same as the car display (miles or km, °F or °C)",
-            "fr": "Comme l'écran de la voiture (miles ou km, °F ou °C)"
+            "fr": "Comme l'écran de la voiture (miles ou km, °F ou °C)",
+            "de": "Wie die Anzeige im Auto (Meilen oder km, °F oder °C)",
+            "es": "Como la pantalla del coche (millas o km, °F o °C)"
           }
         },
-        { "value": "imperial", "label": { "en": "Miles and °F", "fr": "Miles et °F" } },
-        { "value": "metric", "label": { "en": "Kilometers and °C", "fr": "Kilomètres et °C" } }
+        {
+          "value": "imperial",
+          "label": {
+            "en": "Miles and °F",
+            "fr": "Miles et °F",
+            "de": "Meilen und °F",
+            "es": "Millas y °F"
+          }
+        },
+        {
+          "value": "metric",
+          "label": {
+            "en": "Kilometers and °C",
+            "fr": "Kilomètres et °C",
+            "de": "Kilometer und °C",
+            "es": "Kilómetros y °C"
+          }
+        }
       ]
     },
     {
       "key": "language",
       "type": "select",
-      "label": { "en": "Device names language", "fr": "Langue des noms d'appareils" },
+      "label": {
+        "en": "Device names language",
+        "fr": "Langue des noms d'appareils",
+        "de": "Sprache der Gerätenamen",
+        "es": "Idioma de los nombres de dispositivos"
+      },
       "description": {
         "en": "Language of the feature names given to new devices (Gladys keeps a name once the device is created).",
-        "fr": "Langue des noms de fonctionnalités des nouveaux appareils (Gladys garde un nom une fois l'appareil créé)."
+        "fr": "Langue des noms de fonctionnalités des nouveaux appareils (Gladys garde un nom une fois l'appareil créé).",
+        "de": "Sprache der Funktionsnamen neuer Geräte (Gladys behält einen Namen, sobald das Gerät erstellt ist).",
+        "es": "Idioma de los nombres de funcionalidades de los nuevos dispositivos (Gladys conserva un nombre una vez creado el dispositivo)."
       },
       "required": false,
       "default": "en",
       "options": [
-        { "value": "en", "label": { "en": "English", "fr": "Anglais" } },
-        { "value": "fr", "label": { "en": "French", "fr": "Français" } }
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
       ]
     },
     {
       "key": "vehicle_refresh_minutes",
       "type": "select",
-      "label": { "en": "Backup refresh of the cars", "fr": "Relevé de secours des voitures" },
+      "label": {
+        "en": "Backup refresh of the cars",
+        "fr": "Relevé de secours des voitures",
+        "de": "Ersatzabfrage der Autos",
+        "es": "Lectura de respaldo de los coches"
+      },
       "description": {
         "en": "Cars are followed in real time through the Teslemetry stream. When a car is awake but streams nothing (older cars, streaming off), its data is read at this pace. Never while it sleeps.",
-        "fr": "Les voitures sont suivies en temps réel par le flux Teslemetry. Quand une voiture éveillée n'envoie rien (anciens modèles, flux désactivé), ses données sont lues à ce rythme. Jamais pendant qu'elle dort."
+        "fr": "Les voitures sont suivies en temps réel par le flux Teslemetry. Quand une voiture éveillée n'envoie rien (anciens modèles, flux désactivé), ses données sont lues à ce rythme. Jamais pendant qu'elle dort.",
+        "de": "Die Autos werden in Echtzeit über den Teslemetry-Stream verfolgt. Wenn ein waches Auto nichts sendet (ältere Modelle, Streaming aus), werden seine Daten in diesem Takt gelesen. Nie, während es schläft.",
+        "es": "Los coches se siguen en tiempo real mediante el flujo de Teslemetry. Cuando un coche despierto no envía nada (modelos antiguos, flujo desactivado), sus datos se leen con esta frecuencia. Nunca mientras duerme."
       },
       "required": false,
       "default": "30",
       "options": [
-        { "value": "30", "label": { "en": "Every 30 minutes", "fr": "Toutes les 30 minutes" } },
-        { "value": "60", "label": { "en": "Every hour", "fr": "Toutes les heures" } },
-        { "value": "0", "label": { "en": "Never (stream only)", "fr": "Jamais (flux seul)" } }
+        {
+          "value": "30",
+          "label": {
+            "en": "Every 30 minutes",
+            "fr": "Toutes les 30 minutes",
+            "de": "Alle 30 Minuten",
+            "es": "Cada 30 minutos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "Every hour",
+            "fr": "Toutes les heures",
+            "de": "Jede Stunde",
+            "es": "Cada hora"
+          }
+        },
+        {
+          "value": "0",
+          "label": {
+            "en": "Never (stream only)",
+            "fr": "Jamais (flux seul)",
+            "de": "Nie (nur Stream)",
+            "es": "Nunca (solo flujo)"
+          }
+        }
       ]
     },
     {
@@ -100,11 +223,15 @@
       "type": "boolean",
       "label": {
         "en": "Send the home consumption to the energy dashboard",
-        "fr": "Envoyer la consommation de la maison au tableau de bord énergie"
+        "fr": "Envoyer la consommation de la maison au tableau de bord énergie",
+        "de": "Hausverbrauch an das Energie-Dashboard senden",
+        "es": "Enviar el consumo de la casa al panel de energía"
       },
       "description": {
         "en": "Adds a home consumption index (kWh) to each Powerwall site, from which Gladys computes consumption and cost. Gladys attaches it to your main electric meter: leave it off if your utility meter is already in Gladys, or the house is counted twice.",
-        "fr": "Ajoute un index de consommation de la maison (kWh) à chaque site Powerwall, dont Gladys calcule la consommation et le coût. Gladys le rattache à votre compteur électrique principal : laissez-le désactivé si votre compteur (Linky…) est déjà dans Gladys, sinon la maison est comptée deux fois."
+        "fr": "Ajoute un index de consommation de la maison (kWh) à chaque site Powerwall, dont Gladys calcule la consommation et le coût. Gladys le rattache à votre compteur électrique principal : laissez-le désactivé si votre compteur (Linky…) est déjà dans Gladys, sinon la maison est comptée deux fois.",
+        "de": "Fügt jedem Powerwall-Standort einen Verbrauchszähler des Hauses (kWh) hinzu, aus dem Gladys Verbrauch und Kosten berechnet. Gladys ordnet ihn deinem Hauptstromzähler zu: Lass es ausgeschaltet, wenn dein Stromzähler schon in Gladys ist, sonst wird das Haus doppelt gezählt.",
+        "es": "Añade un índice de consumo de la casa (kWh) a cada sitio Powerwall, a partir del cual Gladys calcula el consumo y el coste. Gladys lo asocia a su contador eléctrico principal: déjelo desactivado si su contador ya está en Gladys, o la casa se contará dos veces."
       },
       "required": false,
       "default": false
@@ -113,10 +240,17 @@
   "actions": [
     {
       "key": "test_connection",
-      "label": { "en": "Test the connection", "fr": "Tester la connexion" },
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
       "description": {
         "en": "Lists the vehicles and energy sites Teslemetry gives access to. Free: no car is woken.",
-        "fr": "Liste les véhicules et sites d'énergie accessibles via Teslemetry. Gratuit : aucune voiture n'est réveillée."
+        "fr": "Liste les véhicules et sites d'énergie accessibles via Teslemetry. Gratuit : aucune voiture n'est réveillée.",
+        "de": "Listet die Fahrzeuge und Energiestandorte auf, auf die Teslemetry Zugriff gibt. Kostenlos: Kein Auto wird geweckt.",
+        "es": "Enumera los vehículos y sitios de energía a los que Teslemetry da acceso. Gratuito: no se despierta ningún coche."
       },
       "timeout_seconds": 30
     }
@@ -124,144 +258,251 @@
   "scene_triggers": [
     {
       "key": "charging_started",
-      "label": { "en": "Tesla started charging", "fr": "La Tesla a commencé à charger" },
+      "label": {
+        "en": "Tesla started charging",
+        "fr": "La Tesla a commencé à charger",
+        "de": "Tesla hat mit dem Laden begonnen",
+        "es": "El Tesla ha empezado a cargar"
+      },
       "description": {
         "en": "A charging session starts or resumes.",
-        "fr": "Une session de charge démarre ou reprend."
+        "fr": "Une session de charge démarre ou reprend.",
+        "de": "Ein Ladevorgang beginnt oder wird fortgesetzt.",
+        "es": "Una sesión de carga empieza o se reanuda."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Vehicle", "fr": "Véhicule" }
+          "label": {
+            "en": "Vehicle",
+            "fr": "Véhicule",
+            "de": "Fahrzeug",
+            "es": "Vehículo"
+          }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
+          "label": {
+            "en": "Battery level (%)",
+            "fr": "Niveau de batterie (%)",
+            "de": "Batteriestand (%)",
+            "es": "Nivel de batería (%)"
+          }
         }
       ]
     },
     {
       "key": "charging_complete",
-      "label": { "en": "Tesla charging complete", "fr": "Charge de la Tesla terminée" },
+      "label": {
+        "en": "Tesla charging complete",
+        "fr": "Charge de la Tesla terminée",
+        "de": "Tesla-Ladevorgang abgeschlossen",
+        "es": "Carga del Tesla completada"
+      },
       "description": {
         "en": "The car reached its charge limit.",
-        "fr": "La voiture a atteint sa limite de charge."
+        "fr": "La voiture a atteint sa limite de charge.",
+        "de": "Das Auto hat seine Ladegrenze erreicht.",
+        "es": "El coche ha alcanzado su límite de carga."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Vehicle", "fr": "Véhicule" }
+          "label": {
+            "en": "Vehicle",
+            "fr": "Véhicule",
+            "de": "Fahrzeug",
+            "es": "Vehículo"
+          }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
+          "label": {
+            "en": "Battery level (%)",
+            "fr": "Niveau de batterie (%)",
+            "de": "Batteriestand (%)",
+            "es": "Nivel de batería (%)"
+          }
         }
       ]
     },
     {
       "key": "vehicle_plugged_in",
-      "label": { "en": "Tesla plugged in", "fr": "Tesla branchée" },
+      "label": {
+        "en": "Tesla plugged in",
+        "fr": "Tesla branchée",
+        "de": "Tesla angeschlossen",
+        "es": "Tesla enchufado"
+      },
       "description": {
         "en": "A charging cable was connected to the car.",
-        "fr": "Un câble de charge a été branché sur la voiture."
+        "fr": "Un câble de charge a été branché sur la voiture.",
+        "de": "Ein Ladekabel wurde an das Auto angeschlossen.",
+        "es": "Se ha conectado un cable de carga al coche."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Vehicle", "fr": "Véhicule" }
+          "label": {
+            "en": "Vehicle",
+            "fr": "Véhicule",
+            "de": "Fahrzeug",
+            "es": "Vehículo"
+          }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
+          "label": {
+            "en": "Battery level (%)",
+            "fr": "Niveau de batterie (%)",
+            "de": "Batteriestand (%)",
+            "es": "Nivel de batería (%)"
+          }
         }
       ]
     },
     {
       "key": "vehicle_unplugged",
-      "label": { "en": "Tesla unplugged", "fr": "Tesla débranchée" },
+      "label": {
+        "en": "Tesla unplugged",
+        "fr": "Tesla débranchée",
+        "de": "Tesla abgesteckt",
+        "es": "Tesla desenchufado"
+      },
       "description": {
         "en": "The charging cable was removed from the car.",
-        "fr": "Le câble de charge a été retiré de la voiture."
+        "fr": "Le câble de charge a été retiré de la voiture.",
+        "de": "Das Ladekabel wurde vom Auto abgezogen.",
+        "es": "Se ha retirado el cable de carga del coche."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Vehicle", "fr": "Véhicule" }
+          "label": {
+            "en": "Vehicle",
+            "fr": "Véhicule",
+            "de": "Fahrzeug",
+            "es": "Vehículo"
+          }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": { "en": "Battery level (%)", "fr": "Niveau de batterie (%)" }
+          "label": {
+            "en": "Battery level (%)",
+            "fr": "Niveau de batterie (%)",
+            "de": "Batteriestand (%)",
+            "es": "Nivel de batería (%)"
+          }
         }
       ]
     },
     {
       "key": "grid_outage",
-      "label": { "en": "Grid outage (Powerwall)", "fr": "Coupure réseau (Powerwall)" },
+      "label": {
+        "en": "Grid outage (Powerwall)",
+        "fr": "Coupure réseau (Powerwall)",
+        "de": "Netzausfall (Powerwall)",
+        "es": "Corte de red (Powerwall)"
+      },
       "description": {
         "en": "The Powerwall gateway lost the grid and the house runs on backup.",
-        "fr": "La passerelle Powerwall a perdu le réseau et la maison passe sur secours."
+        "fr": "La passerelle Powerwall a perdu le réseau et la maison passe sur secours.",
+        "de": "Das Powerwall-Gateway hat das Netz verloren und das Haus läuft im Notstrombetrieb.",
+        "es": "La pasarela Powerwall ha perdido la red y la casa funciona con respaldo."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Energy site", "fr": "Site d'énergie" }
+          "label": {
+            "en": "Energy site",
+            "fr": "Site d'énergie",
+            "de": "Energiestandort",
+            "es": "Sitio de energía"
+          }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": { "en": "Powerwall charge (%)", "fr": "Charge du Powerwall (%)" }
+          "label": {
+            "en": "Powerwall charge (%)",
+            "fr": "Charge du Powerwall (%)",
+            "de": "Powerwall-Ladestand (%)",
+            "es": "Carga del Powerwall (%)"
+          }
         },
         {
           "key": "intentional",
           "type": "boolean",
-          "label": { "en": "Off-grid on purpose", "fr": "Hors réseau volontaire" }
+          "label": {
+            "en": "Off-grid on purpose",
+            "fr": "Hors réseau volontaire",
+            "de": "Absichtlich netzunabhängig",
+            "es": "Desconectado de la red a propósito"
+          }
         }
       ]
     },
     {
       "key": "grid_restored",
-      "label": { "en": "Grid restored (Powerwall)", "fr": "Retour du réseau (Powerwall)" },
+      "label": {
+        "en": "Grid restored (Powerwall)",
+        "fr": "Retour du réseau (Powerwall)",
+        "de": "Netz wiederhergestellt (Powerwall)",
+        "es": "Red restablecida (Powerwall)"
+      },
       "description": {
         "en": "The grid is back and the house is connected to it again.",
-        "fr": "Le réseau est revenu et la maison y est reconnectée."
+        "fr": "Le réseau est revenu et la maison y est reconnectée.",
+        "de": "Das Netz ist zurück und das Haus ist wieder damit verbunden.",
+        "es": "La red ha vuelto y la casa está conectada de nuevo a ella."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Energy site", "fr": "Site d'énergie" }
+          "label": {
+            "en": "Energy site",
+            "fr": "Site d'énergie",
+            "de": "Energiestandort",
+            "es": "Sitio de energía"
+          }
         }
       ],
       "variables": [
         {
           "key": "battery_level",
           "type": "number",
-          "label": { "en": "Powerwall charge (%)", "fr": "Charge du Powerwall (%)" }
+          "label": {
+            "en": "Powerwall charge (%)",
+            "fr": "Charge du Powerwall (%)",
+            "de": "Powerwall-Ladestand (%)",
+            "es": "Carga del Powerwall (%)"
+          }
         }
       ]
     }
@@ -269,10 +510,17 @@
   "scene_actions": [
     {
       "key": "set_backup_reserve",
-      "label": { "en": "Set the Powerwall backup reserve", "fr": "Régler la réserve du Powerwall" },
+      "label": {
+        "en": "Set the Powerwall backup reserve",
+        "fr": "Régler la réserve du Powerwall",
+        "de": "Notstromreserve der Powerwall einstellen",
+        "es": "Ajustar la reserva de respaldo del Powerwall"
+      },
       "description": {
         "en": "Share of the Powerwall kept for outages, e.g. 100 % before a storm.",
-        "fr": "Part du Powerwall gardée pour les coupures, par exemple 100 % avant une tempête."
+        "fr": "Part du Powerwall gardée pour les coupures, par exemple 100 % avant une tempête.",
+        "de": "Anteil der Powerwall, der für Ausfälle reserviert bleibt, z. B. 100 % vor einem Sturm.",
+        "es": "Parte del Powerwall reservada para los cortes, p. ej. 100 % antes de una tormenta."
       },
       "timeout_seconds": 30,
       "fields": [
@@ -280,14 +528,29 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Energy site", "fr": "Site d'énergie" },
+          "label": {
+            "en": "Energy site",
+            "fr": "Site d'énergie",
+            "de": "Energiestandort",
+            "es": "Sitio de energía"
+          },
           "required": true
         },
         {
           "key": "percent",
           "type": "number",
-          "label": { "en": "Backup reserve (%)", "fr": "Réserve de secours (%)" },
-          "placeholder": { "en": "e.g. 100", "fr": "ex. 100" },
+          "label": {
+            "en": "Backup reserve (%)",
+            "fr": "Réserve de secours (%)",
+            "de": "Notstromreserve (%)",
+            "es": "Reserva de respaldo (%)"
+          },
+          "placeholder": {
+            "en": "e.g. 100",
+            "fr": "ex. 100",
+            "de": "z. B. 100",
+            "es": "p. ej. 100"
+          },
           "required": true,
           "default": 100,
           "min": 0,
@@ -298,7 +561,12 @@
         {
           "key": "backup_reserve",
           "type": "number",
-          "label": { "en": "New backup reserve (%)", "fr": "Nouvelle réserve (%)" }
+          "label": {
+            "en": "New backup reserve (%)",
+            "fr": "Nouvelle réserve (%)",
+            "de": "Neue Notstromreserve (%)",
+            "es": "Nueva reserva de respaldo (%)"
+          }
         }
       ]
     }
@@ -306,10 +574,17 @@
   "widgets": [
     {
       "key": "vehicle",
-      "label": { "en": "Tesla vehicle", "fr": "Véhicule Tesla" },
+      "label": {
+        "en": "Tesla vehicle",
+        "fr": "Véhicule Tesla",
+        "de": "Tesla-Fahrzeug",
+        "es": "Vehículo Tesla"
+      },
       "description": {
         "en": "Battery, range, charging and climate, with buttons to charge, heat or cool, lock.",
-        "fr": "Batterie, autonomie, charge et clim, avec boutons pour charger, climatiser, verrouiller."
+        "fr": "Batterie, autonomie, charge et clim, avec boutons pour charger, climatiser, verrouiller.",
+        "de": "Batterie, Reichweite, Laden und Klima, mit Tasten zum Laden, Heizen oder Kühlen, Verriegeln.",
+        "es": "Batería, autonomía, carga y climatización, con botones para cargar, climatizar, bloquear."
       },
       "icon": "battery-charging",
       "settings": [
@@ -317,7 +592,12 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Vehicle", "fr": "Véhicule" },
+          "label": {
+            "en": "Vehicle",
+            "fr": "Véhicule",
+            "de": "Fahrzeug",
+            "es": "Vehículo"
+          },
           "required": true
         }
       ],
@@ -325,10 +605,17 @@
     },
     {
       "key": "energy_flow",
-      "label": { "en": "Tesla energy flow", "fr": "Flux d'énergie Tesla" },
+      "label": {
+        "en": "Tesla energy flow",
+        "fr": "Flux d'énergie Tesla",
+        "de": "Tesla-Energiefluss",
+        "es": "Flujo de energía Tesla"
+      },
       "description": {
         "en": "Solar, home, grid and Powerwall in real time, the last 24 hours and the backup state.",
-        "fr": "Solaire, maison, réseau et Powerwall en direct, les dernières 24 h et l'état du secours."
+        "fr": "Solaire, maison, réseau et Powerwall en direct, les dernières 24 h et l'état du secours.",
+        "de": "Solar, Haus, Netz und Powerwall in Echtzeit, die letzten 24 Stunden und der Notstromstatus.",
+        "es": "Solar, casa, red y Powerwall en tiempo real, las últimas 24 horas y el estado del respaldo."
       },
       "icon": "sun",
       "settings": [
@@ -336,7 +623,12 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Energy site", "fr": "Site d'énergie" },
+          "label": {
+            "en": "Energy site",
+            "fr": "Site d'énergie",
+            "de": "Energiestandort",
+            "es": "Sitio de energía"
+          },
           "required": true
         }
       ]

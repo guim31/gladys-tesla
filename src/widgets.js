@@ -22,6 +22,8 @@ import { both } from './i18n.js';
 const pickDevice = {
   en: 'Choose a device in the widget settings.',
   fr: 'Choisissez un appareil dans les réglages du widget.',
+  de: 'Wähle ein Gerät in den Widget-Einstellungen.',
+  es: 'Elija un dispositivo en los ajustes del widget.',
 };
 
 function message(text) {
@@ -32,35 +34,35 @@ const percent = (value) => (Number.isFinite(value) ? `${Math.round(value)} %` : 
 
 // Charge session as one status row.
 function chargeRow(snapshot, plugged) {
-  const label = { en: 'Charging', fr: 'Charge' };
+  const label = { en: 'Charging', fr: 'Charge', de: 'Laden', es: 'Carga' };
   switch (snapshot.chargingState) {
     case 'Charging':
     case 'Starting':
       return {
         label,
         icon: 'zap',
-        value: { en: 'Charging', fr: 'En charge' },
+        value: { en: 'Charging', fr: 'En charge', de: 'Lädt', es: 'Cargando' },
         color: WIDGET_COLORS.SUCCESS,
       };
     case 'Complete':
       return {
         label,
         icon: 'battery',
-        value: { en: 'Complete', fr: 'Terminée' },
+        value: { en: 'Complete', fr: 'Terminée', de: 'Abgeschlossen', es: 'Completada' },
         color: WIDGET_COLORS.INFO,
       };
     case 'Stopped':
       return {
         label,
         icon: 'pause',
-        value: { en: 'Stopped', fr: 'Arrêtée' },
+        value: { en: 'Stopped', fr: 'Arrêtée', de: 'Gestoppt', es: 'Detenida' },
         color: WIDGET_COLORS.WARNING,
       };
     case 'NoPower':
       return {
         label,
         icon: 'alert-triangle',
-        value: { en: 'No power', fr: 'Pas de courant' },
+        value: { en: 'No power', fr: 'Pas de courant', de: 'Kein Strom', es: 'Sin corriente' },
         color: WIDGET_COLORS.DANGER,
       };
     default:
@@ -68,7 +70,7 @@ function chargeRow(snapshot, plugged) {
         ? {
             label,
             icon: 'battery',
-            value: { en: 'Unplugged', fr: 'Débranchée' },
+            value: { en: 'Unplugged', fr: 'Débranchée', de: 'Abgesteckt', es: 'Desenchufado' },
             color: WIDGET_COLORS.NEUTRAL,
           }
         : { label, icon: 'battery', value: '—', color: WIDGET_COLORS.NEUTRAL };
@@ -82,25 +84,25 @@ function vehicleContent(view) {
   const components = [
     {
       type: 'value',
-      label: { en: 'Battery', fr: 'Batterie' },
+      label: { en: 'Battery', fr: 'Batterie', de: 'Batterie', es: 'Batería' },
       icon: 'battery',
       device_feature: ref(VEHICLE_FEATURES.BATTERY_LEVEL),
     },
     {
       type: 'value',
-      label: { en: 'Range', fr: 'Autonomie' },
+      label: { en: 'Range', fr: 'Autonomie', de: 'Reichweite', es: 'Autonomía' },
       icon: 'navigation',
       device_feature: ref(VEHICLE_FEATURES.RANGE),
     },
     {
       type: 'value',
-      label: { en: 'Charging power', fr: 'Puissance' },
+      label: { en: 'Charging power', fr: 'Puissance', de: 'Ladeleistung', es: 'Potencia' },
       icon: 'zap',
       device_feature: ref(VEHICLE_FEATURES.CHARGE_POWER),
     },
     {
       type: 'value',
-      label: { en: 'Cabin', fr: 'Habitacle' },
+      label: { en: 'Cabin', fr: 'Habitacle', de: 'Innenraum', es: 'Habitáculo' },
       icon: 'thermometer',
       device_feature: ref(VEHICLE_FEATURES.INSIDE_TEMPERATURE),
     },
@@ -109,44 +111,53 @@ function vehicleContent(view) {
       items: [
         chargeRow(snapshot, plugged),
         {
-          label: { en: 'Charge limit', fr: 'Limite de charge' },
+          label: {
+            en: 'Charge limit',
+            fr: 'Limite de charge',
+            de: 'Ladegrenze',
+            es: 'Límite de carga',
+          },
           icon: 'sliders',
           value: percent(snapshot.chargeLimit),
           color: WIDGET_COLORS.NEUTRAL,
         },
         {
-          label: { en: 'Climate', fr: 'Climatisation' },
+          label: { en: 'Climate', fr: 'Climatisation', de: 'Klimaanlage', es: 'Climatización' },
           icon: 'wind',
           value: onOff(
             snapshot.climateOn,
-            { en: 'On', fr: 'En marche' },
-            { en: 'Off', fr: 'Arrêtée' },
+            { en: 'On', fr: 'En marche', de: 'An', es: 'Encendida' },
+            { en: 'Off', fr: 'Arrêtée', de: 'Aus', es: 'Apagada' },
           ),
           color: snapshot.climateOn ? WIDGET_COLORS.SUCCESS : WIDGET_COLORS.NEUTRAL,
         },
         {
-          label: { en: 'Doors', fr: 'Portes' },
+          label: { en: 'Doors', fr: 'Portes', de: 'Türen', es: 'Puertas' },
           icon: snapshot.locked === false ? 'unlock' : 'lock',
           value: onOff(
             snapshot.locked,
-            { en: 'Locked', fr: 'Verrouillées' },
-            { en: 'Unlocked', fr: 'Déverrouillées' },
+            { en: 'Locked', fr: 'Verrouillées', de: 'Verriegelt', es: 'Bloqueadas' },
+            { en: 'Unlocked', fr: 'Déverrouillées', de: 'Entriegelt', es: 'Desbloqueadas' },
           ),
           color: snapshot.locked === false ? WIDGET_COLORS.WARNING : WIDGET_COLORS.SUCCESS,
         },
         {
           label: both('sentry'),
           icon: 'eye',
-          value: onOff(snapshot.sentry, { en: 'On', fr: 'Activé' }, { en: 'Off', fr: 'Désactivé' }),
+          value: onOff(
+            snapshot.sentry,
+            { en: 'On', fr: 'Activé', de: 'An', es: 'Activado' },
+            { en: 'Off', fr: 'Désactivé', de: 'Aus', es: 'Desactivado' },
+          ),
           color: snapshot.sentry ? WIDGET_COLORS.INFO : WIDGET_COLORS.NEUTRAL,
         },
         {
-          label: { en: 'Vehicle', fr: 'Véhicule' },
+          label: { en: 'Vehicle', fr: 'Véhicule', de: 'Fahrzeug', es: 'Vehículo' },
           icon: snapshot.online ? 'wifi' : 'moon',
           value: onOff(
             snapshot.online,
-            { en: 'Online', fr: 'En ligne' },
-            { en: 'Asleep', fr: 'Endormie' },
+            { en: 'Online', fr: 'En ligne', de: 'Online', es: 'En línea' },
+            { en: 'Asleep', fr: 'Endormie', de: 'Schläft', es: 'Dormido' },
           ),
           color: snapshot.online ? WIDGET_COLORS.SUCCESS : WIDGET_COLORS.NEUTRAL,
         },
@@ -158,13 +169,18 @@ function vehicleContent(view) {
     snapshot.climateOn
       ? {
           type: 'button',
-          label: { en: 'Stop climate', fr: 'Arrêter la clim' },
+          label: { en: 'Stop climate', fr: 'Arrêter la clim', de: 'Klima aus', es: 'Apagar clima' },
           icon: 'wind',
           action: { key: 'climate_off' },
         }
       : {
           type: 'button',
-          label: { en: 'Start climate', fr: 'Lancer la clim' },
+          label: {
+            en: 'Start climate',
+            fr: 'Lancer la clim',
+            de: 'Klima an',
+            es: 'Encender clima',
+          },
           icon: 'wind',
           action: { key: 'climate_on' },
         },
@@ -172,14 +188,24 @@ function vehicleContent(view) {
   if (snapshot.chargingState === 'Charging' || snapshot.chargingState === 'Starting') {
     components.push({
       type: 'button',
-      label: { en: 'Stop charging', fr: 'Arrêter la charge' },
+      label: {
+        en: 'Stop charging',
+        fr: 'Arrêter la charge',
+        de: 'Laden stoppen',
+        es: 'Detener carga',
+      },
       icon: 'zap-off',
       action: { key: 'charge_stop' },
     });
   } else if (plugged) {
     components.push({
       type: 'button',
-      label: { en: 'Start charging', fr: 'Lancer la charge' },
+      label: {
+        en: 'Start charging',
+        fr: 'Lancer la charge',
+        de: 'Laden starten',
+        es: 'Iniciar carga',
+      },
       icon: 'zap',
       action: { key: 'charge_start' },
     });
@@ -188,13 +214,13 @@ function vehicleContent(view) {
     snapshot.locked === false
       ? {
           type: 'button',
-          label: { en: 'Lock', fr: 'Verrouiller' },
+          label: { en: 'Lock', fr: 'Verrouiller', de: 'Verriegeln', es: 'Bloquear' },
           icon: 'lock',
           action: { key: 'lock' },
         }
       : {
           type: 'button',
-          label: { en: 'Unlock', fr: 'Déverrouiller' },
+          label: { en: 'Unlock', fr: 'Déverrouiller', de: 'Entriegeln', es: 'Desbloquear' },
           icon: 'unlock',
           style: 'danger',
           // A dashboard can hang on a wall: unlocking asks first.
@@ -206,25 +232,65 @@ function vehicleContent(view) {
 
 // Widget action key → [feature, value, toast].
 const VEHICLE_ACTIONS = {
-  climate_on: [VEHICLE_FEATURES.CLIMATE, 1, { en: 'Climate starting', fr: 'Climatisation lancée' }],
+  climate_on: [
+    VEHICLE_FEATURES.CLIMATE,
+    1,
+    {
+      en: 'Climate starting',
+      fr: 'Climatisation lancée',
+      de: 'Klimaanlage startet',
+      es: 'Climatización encendida',
+    },
+  ],
   climate_off: [
     VEHICLE_FEATURES.CLIMATE,
     0,
-    { en: 'Climate stopped', fr: 'Climatisation arrêtée' },
+    {
+      en: 'Climate stopped',
+      fr: 'Climatisation arrêtée',
+      de: 'Klimaanlage gestoppt',
+      es: 'Climatización apagada',
+    },
   ],
-  charge_start: [VEHICLE_FEATURES.CHARGING, 1, { en: 'Charging starting', fr: 'Charge lancée' }],
-  charge_stop: [VEHICLE_FEATURES.CHARGING, 0, { en: 'Charging stopped', fr: 'Charge arrêtée' }],
-  lock: [VEHICLE_FEATURES.LOCKED, 1, { en: 'Vehicle locked', fr: 'Véhicule verrouillé' }],
-  unlock: [VEHICLE_FEATURES.LOCKED, 0, { en: 'Vehicle unlocked', fr: 'Véhicule déverrouillé' }],
+  charge_start: [
+    VEHICLE_FEATURES.CHARGING,
+    1,
+    { en: 'Charging starting', fr: 'Charge lancée', de: 'Laden startet', es: 'Carga iniciada' },
+  ],
+  charge_stop: [
+    VEHICLE_FEATURES.CHARGING,
+    0,
+    { en: 'Charging stopped', fr: 'Charge arrêtée', de: 'Laden gestoppt', es: 'Carga detenida' },
+  ],
+  lock: [
+    VEHICLE_FEATURES.LOCKED,
+    1,
+    {
+      en: 'Vehicle locked',
+      fr: 'Véhicule verrouillé',
+      de: 'Fahrzeug verriegelt',
+      es: 'Vehículo bloqueado',
+    },
+  ],
+  unlock: [
+    VEHICLE_FEATURES.LOCKED,
+    0,
+    {
+      en: 'Vehicle unlocked',
+      fr: 'Véhicule déverrouillé',
+      de: 'Fahrzeug entriegelt',
+      es: 'Vehículo desbloqueado',
+    },
+  ],
 };
 
 function gridRow(snapshot) {
-  const label = { en: 'Grid', fr: 'Réseau' };
+  const label = { en: 'Grid', fr: 'Réseau', de: 'Netz', es: 'Red' };
   if (snapshot.gridConnected === true) {
     return {
       label,
       icon: 'zap',
-      value: { en: 'Connected', fr: 'Présent' },
+      value: { en: 'Connected', fr: 'Présent', de: 'Verbunden', es: 'Conectada' },
       color: WIDGET_COLORS.SUCCESS,
     };
   }
@@ -233,13 +299,18 @@ function gridRow(snapshot) {
       ? {
           label,
           icon: 'zap-off',
-          value: { en: 'Off-grid (manual)', fr: 'Hors réseau (manuel)' },
+          value: {
+            en: 'Off-grid (manual)',
+            fr: 'Hors réseau (manuel)',
+            de: 'Netzunabhängig (manuell)',
+            es: 'Sin red (manual)',
+          },
           color: WIDGET_COLORS.WARNING,
         }
       : {
           label,
           icon: 'zap-off',
-          value: { en: 'Outage', fr: 'Coupure' },
+          value: { en: 'Outage', fr: 'Coupure', de: 'Ausfall', es: 'Corte' },
           color: WIDGET_COLORS.DANGER,
         };
   }
@@ -253,12 +324,28 @@ function energyFlowContent(view) {
   const tile = (key, label, icon) =>
     exists.has(ref(key)) ? { type: 'value', label, icon, device_feature: ref(key) } : null;
   const tiles = [
-    tile(SITE_FEATURES.SOLAR_POWER, { en: 'Solar', fr: 'Solaire' }, 'sun'),
-    tile(SITE_FEATURES.HOME_POWER, { en: 'Home', fr: 'Maison' }, 'home'),
-    tile(SITE_FEATURES.GRID_POWER, { en: 'Grid', fr: 'Réseau' }, 'activity'),
-    tile(SITE_FEATURES.BATTERY_LEVEL, { en: 'Powerwall', fr: 'Powerwall' }, 'battery'),
-    tile(SITE_FEATURES.BATTERY_CHARGE_POWER, { en: 'Charging', fr: 'Charge' }, 'battery-charging'),
-    tile(SITE_FEATURES.BATTERY_DISCHARGE_POWER, { en: 'Discharging', fr: 'Décharge' }, 'zap'),
+    tile(
+      SITE_FEATURES.SOLAR_POWER,
+      { en: 'Solar', fr: 'Solaire', de: 'Solar', es: 'Solar' },
+      'sun',
+    ),
+    tile(SITE_FEATURES.HOME_POWER, { en: 'Home', fr: 'Maison', de: 'Haus', es: 'Casa' }, 'home'),
+    tile(SITE_FEATURES.GRID_POWER, { en: 'Grid', fr: 'Réseau', de: 'Netz', es: 'Red' }, 'activity'),
+    tile(
+      SITE_FEATURES.BATTERY_LEVEL,
+      { en: 'Powerwall', fr: 'Powerwall', de: 'Powerwall', es: 'Powerwall' },
+      'battery',
+    ),
+    tile(
+      SITE_FEATURES.BATTERY_CHARGE_POWER,
+      { en: 'Charging', fr: 'Charge', de: 'Laden', es: 'Carga' },
+      'battery-charging',
+    ),
+    tile(
+      SITE_FEATURES.BATTERY_DISCHARGE_POWER,
+      { en: 'Discharging', fr: 'Décharge', de: 'Entladen', es: 'Descarga' },
+      'zap',
+    ),
   ].filter(Boolean);
   const series = [SITE_FEATURES.SOLAR_POWER, SITE_FEATURES.HOME_POWER, SITE_FEATURES.GRID_POWER]
     .map(ref)
@@ -274,7 +361,12 @@ function energyFlowContent(view) {
         color: WIDGET_COLORS.NEUTRAL,
       },
       {
-        label: { en: 'Backup reserve', fr: 'Réserve de secours' },
+        label: {
+          en: 'Backup reserve',
+          fr: 'Réserve de secours',
+          de: 'Notstromreserve',
+          es: 'Reserva de respaldo',
+        },
         icon: 'shield',
         value: percent(snapshot.backupReserve),
         color: WIDGET_COLORS.NEUTRAL,
@@ -282,9 +374,14 @@ function energyFlowContent(view) {
     );
     if (snapshot.stormModeActive) {
       items.push({
-        label: { en: 'Storm Watch', fr: 'Alerte tempête' },
+        label: {
+          en: 'Storm Watch',
+          fr: 'Alerte tempête',
+          de: 'Sturmwarnung',
+          es: 'Alerta de tormenta',
+        },
         icon: 'cloud-lightning',
-        value: { en: 'Active', fr: 'Active' },
+        value: { en: 'Active', fr: 'Active', de: 'Aktiv', es: 'Activa' },
         color: WIDGET_COLORS.WARNING,
       });
     }
@@ -295,7 +392,12 @@ function energyFlowContent(view) {
       type: 'chart',
       chart_type: 'line',
       interval: 'last-day',
-      title: { en: 'Last 24 hours', fr: 'Dernières 24 heures' },
+      title: {
+        en: 'Last 24 hours',
+        fr: 'Dernières 24 heures',
+        de: 'Letzte 24 Stunden',
+        es: 'Últimas 24 horas',
+      },
       device_features: series,
     });
   }
@@ -317,6 +419,8 @@ export function createWidgets(tesla) {
               ? {
                   en: 'This device is not a Tesla vehicle.',
                   fr: "Cet appareil n'est pas un véhicule Tesla.",
+                  de: 'Dieses Gerät ist kein Tesla-Fahrzeug.',
+                  es: 'Este dispositivo no es un vehículo Tesla.',
                 }
               : pickDevice,
           );
@@ -340,6 +444,8 @@ export function createWidgets(tesla) {
               ? {
                   en: 'This device is not a Tesla energy site.',
                   fr: "Cet appareil n'est pas un site d'énergie Tesla.",
+                  de: 'Dieses Gerät ist kein Tesla-Energiestandort.',
+                  es: 'Este dispositivo no es un sitio de energía Tesla.',
                 }
               : pickDevice,
           );

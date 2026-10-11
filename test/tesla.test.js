@@ -242,6 +242,8 @@ test('a site in Backup-only mode shows it in the widget', async () => {
   assert.deepEqual(rows.find((r) => r.icon === 'sliders').value, {
     en: 'Backup-only',
     fr: 'Secours uniquement',
+    de: 'Nur Notstrom',
+    es: 'Solo respaldo',
   });
   await tesla.stop();
 });
