@@ -10,6 +10,15 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- Quieter logs: the readings, the published states, the credit balance and the
+  scene triggers move to the debug level (`LOG_LEVEL=debug`). A failing read
+  (network, Teslemetry) is logged once when it starts failing and once when it
+  works again, and a brief reconnection of the real-time stream is no longer
+  logged.
+- Integration SDK 0.15 and up-to-date development tools.
+
 ## [1.3.0] - 2026-10-11
 
 ### Added

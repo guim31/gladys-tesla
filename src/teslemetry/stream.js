@@ -85,6 +85,8 @@ function isCompleteJson(text) {
   }
 }
 
+const LOSS_LOG_AFTER_FAILURES = 2;
+
 /**
  * Keep the SSE connection open for life: reconnect with an exponential
  * backoff (1 s → 5 min), and treat 60 s of silence as a dead connection.
@@ -100,6 +102,7 @@ export function createTeslemetryStream({
   onConnectionChange = () => {},
   logger,
   idleTimeoutMs = 60000,
+  stableMs = 30000,
   maxBackoffMs = 300000,
   sleep = (ms, signal) =>
     new Promise((resolve) => {
@@ -117,6 +120,14 @@ export function createTeslemetryStream({
   let attempt = 0;
   let loop = null;
   let stopSignal = new AbortController();
+  // Logging: the first connection and a real outage (a few failed attempts
+  // in a row) are worth a line; a routine reconnection is not.
+  let everConnected = false;
+  let lossLogged = false;
+  // Failed attempts in a row, short-lived connections included: a server that
+  // accepts then drops the stream at once is down too. Unlike `attempt` (the
+  // backoff), it only resets once a connection has held for `stableMs`.
+  let failures = 0;
 
   function setConnected(value, reason) {
     if (connected === value) return;
@@ -153,6 +164,17 @@ export function createTeslemetryStream({
       return { status: response.status };
     }
     attempt = 0;
+    if (!everConnected) logger?.info('Teslemetry stream connected');
+    else logger?.debug('Teslemetry stream reconnected');
+    everConnected = true;
+    // Back for real once the connection holds.
+    const stableTimer = setTimeout(() => {
+      failures = 0;
+      if (lossLogged) {
+        lossLogged = false;
+        logger?.info('Teslemetry stream connected again');
+      }
+    }, stableMs);
     setConnected(true);
     const parser = new SseParser(handleMessage);
     const decoder = new TextDecoder();
@@ -169,6 +191,7 @@ export function createTeslemetryStream({
       }
     } finally {
       clearTimeout(idleTimer);
+      clearTimeout(stableTimer);
     }
     return { status: response.status, ended: true };
   }
@@ -195,12 +218,19 @@ export function createTeslemetryStream({
         useTopics = false;
         continue;
       }
-      if (outcome.ended) {
-        logger?.info('Teslemetry stream closed by the server, reconnecting');
-      } else if (outcome.error) {
-        logger?.warn(`Teslemetry stream interrupted (${outcome.error.name}), reconnecting`);
+      const why = outcome.ended
+        ? 'closed by the server'
+        : outcome.error
+          ? `interrupted (${outcome.error.name})`
+          : `answered ${outcome.status}`;
+      failures += 1;
+      if (!lossLogged && failures > LOSS_LOG_AFTER_FAILURES) {
+        // A few failures in a row: an outage, not a blip. Logged once; the
+        // recovery is logged when the stream connects again.
+        lossLogged = true;
+        logger?.warn(`Teslemetry stream ${why}, retrying until it comes back`);
       } else {
-        logger?.warn(`Teslemetry stream answered ${outcome.status}, reconnecting`);
+        logger?.debug(`Teslemetry stream ${why}, reconnecting`);
       }
       const delay = Math.min(1000 * 2 ** attempt, maxBackoffMs);
       attempt += 1;

@@ -33,7 +33,13 @@ function streamEvents() {
   return events;
 }
 
-async function setup({ config = {}, store = createMemoryStore(), client, created = true } = {}) {
+async function setup({
+  config = {},
+  store = createMemoryStore(),
+  client,
+  created = true,
+  logger = silent,
+} = {}) {
   const gladys = createFakeGladys();
   const fakeClient = client ?? createFakeClient();
   const streamFactory = createFakeStreamFactory();
@@ -41,7 +47,7 @@ async function setup({ config = {}, store = createMemoryStore(), client, created
   const tesla = createTesla({
     gladys,
     store,
-    logger: silent,
+    logger,
     clientFactory: () => fakeClient,
     streamFactory,
     now: () => clock.t,
@@ -53,6 +59,22 @@ async function setup({ config = {}, store = createMemoryStore(), client, created
   }
   return { gladys, tesla, client: fakeClient, stream: streamFactory, clock, store };
 }
+
+/** A logger that keeps every line, by level. */
+function captureLogger() {
+  const lines = [];
+  const logger = {};
+  for (const level of ['debug', 'info', 'warn', 'error']) {
+    logger[level] = (message) => lines.push({ level, message: String(message) });
+  }
+  logger.lines = lines;
+  logger.at = (...levels) => lines.filter((line) => levels.includes(line.level));
+  return logger;
+}
+
+const settle = async () => {
+  for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve));
+};
 
 const vehicleId = (vin) => `ext:tesla:vehicle:${vin}`;
 const siteId = (id) => `ext:tesla:energy-site:${id}`;
@@ -612,5 +634,113 @@ test('a Wall Connector without a Teslemetry token: the notice comes first', asyn
 test('no Wall Connector ever set up: no notice', async () => {
   const { gladys, tesla } = await setup();
   assert.equal(gladys.connectionStatuses.at(-1).message, undefined);
+  await tesla.stop();
+});
+
+test('the container keeps its own pace: states are published with no poll from the core', async (t) => {
+  // Gladys 5.2.0 never polls a device published with `should_poll: false`
+  // (Gladys#3198): the runtime's own timer must do the work.
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  const { gladys, tesla, client, clock } = await setup();
+  const read = client.vehicleData;
+  client.vehicleData = async (vin) => {
+    const data = await read(vin);
+    if (vin === VINS.MODEL_3) data.charge_state.battery_level = 80;
+    return data;
+  };
+  const model3 = vehicleId(VINS.MODEL_3);
+  assert.equal(gladys.last(`${model3}:battery-level`), 77);
+  // Model 3 is awake and silent on the stream: due after 30 minutes. The
+  // only thing that runs is the runtime's own interval: nothing calls
+  // tesla.poll() (the core's onPoll) nor tesla.tick() by hand.
+  clock.t += 31 * MINUTE;
+  const reads = client.count('vehicleData');
+  await settle();
+  assert.equal(gladys.last(`${model3}:battery-level`), 77, 'nothing before the timer fires');
+  t.mock.timers.tick(MINUTE);
+  await settle();
+  assert.ok(client.count('vehicleData') > reads, 'fresh reads, from the timer');
+  assert.equal(gladys.last(`${model3}:battery-level`), 80, 'published by the internal timer');
+  await tesla.stop();
+});
+
+test('a normal cycle writes nothing at info level', async () => {
+  const logger = captureLogger();
+  const { tesla, stream, clock, gladys } = await setup({ logger });
+  logger.lines.length = 0; // startup lines are lifecycle, expected
+  for (const event of streamEvents()) stream.emit(event);
+  await tesla.drain();
+  stream.emit({ credits: { name: 'vehicle_data', cost: 1, balance: 990 } });
+  stream.emit({
+    vin: VINS.MODEL_Y,
+    data: { DetailedChargeState: 'DetailedChargeStateStopped', BatteryLevel: 62 },
+  });
+  stream.emit({
+    vin: VINS.MODEL_Y,
+    data: { DetailedChargeState: 'DetailedChargeStateCharging', BatteryLevel: 63 },
+  });
+  await tesla.drain();
+  for (let i = 0; i < 3; i += 1) {
+    clock.t += 31 * MINUTE;
+    await tesla.tick();
+  }
+  for (const device of gladys.devices) await tesla.poll(device);
+  assert.ok(gladys.published.length > 0);
+  assert.deepEqual(logger.at('info', 'warn', 'error'), [], 'debug only');
+  await tesla.stop();
+});
+
+test('a failing read logs once when it starts failing and once when it recovers', async () => {
+  const logger = captureLogger();
+  const { tesla, client, clock, stream } = await setup({ logger });
+  stream.disconnect();
+  logger.lines.length = 0;
+  client.failWith('siteLiveStatus', new TeslemetryError('fetch failed', { kind: 'network' }));
+  client.failWith('products', new TeslemetryError('fetch failed', { kind: 'network' }));
+  for (let i = 0; i < 4; i += 1) {
+    clock.t += 16 * MINUTE;
+    await tesla.tick();
+  }
+  const loud = logger.at('info', 'warn', 'error').map((line) => line.message);
+  const siteLines = loud.filter((m) => m.startsWith('Reading energy site'));
+  const productLines = loud.filter((m) => m.startsWith('Listing the Tesla products'));
+  assert.equal(new Set(siteLines).size, siteLines.length, 'one line per site, not per attempt');
+  assert.ok(siteLines.length >= 1 && siteLines.length <= 3);
+  assert.equal(productLines.length, 1);
+  assert.ok(logger.at('debug').length > 0, 'the repeats go to debug');
+  logger.lines.length = 0;
+  client.failWith('siteLiveStatus', null);
+  client.failWith('products', null);
+  clock.t += 16 * MINUTE;
+  await tesla.tick();
+  clock.t += 16 * MINUTE;
+  await tesla.tick();
+  const recovered = logger.at('info').map((line) => line.message);
+  assert.equal(recovered.filter((m) => m.endsWith('working again')).length, siteLines.length + 1);
+  assert.ok(!logger.lines.some((line) => line.message.includes('test-token')), 'no token');
+  await tesla.stop();
+});
+
+test('a different error on an already failing read is logged again', async () => {
+  const logger = captureLogger();
+  const { tesla, client, clock, stream } = await setup({ logger });
+  stream.disconnect();
+  logger.lines.length = 0;
+  client.failWith('products', new TeslemetryError('fetch failed', { kind: 'network' }));
+  clock.t += 16 * MINUTE;
+  await tesla.tick();
+  client.failWith('products', new TeslemetryError('missing scope', { kind: 'forbidden' }));
+  clock.t += 16 * MINUTE;
+  await tesla.tick();
+  clock.t += 16 * MINUTE;
+  await tesla.tick();
+  const lines = logger
+    .at('warn', 'error')
+    .filter((line) => line.message.startsWith('Listing the Tesla products'));
+  assert.deepEqual(
+    lines.map((line) => line.level),
+    ['warn', 'error'],
+    'the network error once, then the scope error once, at error level',
+  );
   await tesla.stop();
 });

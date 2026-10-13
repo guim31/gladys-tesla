@@ -212,5 +212,7 @@ up; the command goes on and its result shows when the car answers.
 - **Car values only change every 30 minutes**: the car does not stream. Check
   that streaming is on for it in the Teslemetry console and that its software
   is up to date.
-- The integration logs everything it does: open its logs from the Gladys UI,
-  with `LOG_LEVEL=debug` for the full detail. Tokens are never logged.
+- The integration's logs (open them from the Gladys UI) stay quiet in normal
+  use: startup, the real-time stream lost and back, errors (once when they
+  start, once when they stop) and your commands. `LOG_LEVEL=debug` shows every
+  read, state and trigger. Tokens are never logged.
