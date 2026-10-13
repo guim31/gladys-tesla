@@ -32,15 +32,20 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
-src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+src/tesla.js                      the runtime: stream + fallback timer, publishing, commands
+src/teslemetry/client.js          Teslemetry REST client (errors classified, token never logged)
+src/teslemetry/stream.js          Teslemetry SSE stream (reconnection, backoff, outage logging)
+src/devices/vehicle.js            car device, snapshots from vehicle_data and the stream
+src/devices/energySite.js         Powerwall / solar site device
+src/energyIndex.js                cumulative kWh indexes from the daily totals
+src/store.js                      JSON persistence under /data (indexes, trigger memory)
+src/triggers.js, src/scenes.js    scene triggers and actions (manifest)
+src/widgets.js                    dashboard widgets (manifest `widgets`)
+src/config.js, src/units.js       DEFAULT_CONFIG + normalization, unit choice
+src/i18n.js                       texts that leave the container (en, fr, de, es)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
 docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test; test/helpers/fakeGladys.js stands in for the SDK
+test/                             node --test; test/helpers/fake*.js stand in for the SDK and Teslemetry
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +75,16 @@ test/                             node --test; test/helpers/fakeGladys.js stands
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** comes in four languages (English, French, German,
+  Spanish): action messages, manifest texts, widgets, connection messages;
+  `test/i18n.test.js` checks it. The documentation exists in English and
+  French (`docs/en.md` / `docs/fr.md`), kept in sync.
+- **Logs.** The info level only tells the lifecycle: startup, the stream lost
+  and back, errors useful to the user, one line per user command. Readings,
+  states, credits and triggers go to debug (`LOG_LEVEL=debug`). A repeated
+  failure logs once when it starts and once when it stops (`firstFailure` /
+  `recovered` in `src/tesla.js`). `test/tesla.test.js` checks that a normal
+  cycle writes nothing at info.
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -109,6 +122,12 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   15000, 30000, 60000). Le template publie `poll_frequency: 300` sans `should_poll` : c'est faux,
   le cœur répond 400 à la découverte. Pour une cadence hors liste, publier `should_poll: false` et
   pousser les états depuis le conteneur, en gardant un `onPoll` de repli.
+  **Gladys 5.2.0 (issue GladysAssistant/Gladys#3198)** ne sonde que `should_poll: true` avec une
+  `poll_frequency` valide, et un appareil déjà créé sans `should_poll` ne le sera jamais : ne
+  jamais compter sur `onPoll`. Ici, tous les appareils sont en `should_poll: false` : le flux et
+  le minuteur de `src/tesla.js` (une minute, lectures de repli) publient seuls ; `onPoll` ne fait
+  que republier les valeurs connues. Un test le prouve avec `t.mock.timers`, sans aucun appel
+  `onPoll`.
 - **`min` et `max` sont NOT NULL** dans `t_device_feature`, y compris pour `text/text` : sans eux,
   « Ajouter à Gladys » échoue en HTTP 422. Mettre 0/0, comme Zigbee2MQTT.
 - Un état publié sur une fonctionnalité **pas encore ajoutée** dans Gladys reçoit un 200 puis est
@@ -189,7 +208,7 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
-- **Cibler la dernière version publiée de Gladys (5.1.4 au 10/10/2026)**, pas `master` : vérifier
+- **Cibler la dernière version publiée de Gladys (5.2.0 au 13/10/2026)**, pas `master` : vérifier
   qu'une capacité du cœur y est avec `git tag --contains <commit>` sur un clone du dépôt Gladys
   (`git clone --filter=blob:none --no-checkout`, puis `git log -S`). Dans 5.1.4, une action de
   bouton de widget ne garde que `key`, `params` et `confirm` : **pas de `fields`** (le formulaire
@@ -197,9 +216,12 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 
 ## SDK et tests
 
-- Le SDK **publié 0.14.0** n'a ni `publishChangedStates` ni `forgetPublishedStates` ni le module
-  `@gladysassistant/integration-sdk/testing`, que le README de `master` documente : vérifier
-  dans `node_modules` avant de s'en servir, sinon dédupliquer soi-même.
+- SDK **0.15** : il apporte `publishChangedStates`, `DEVICE_POLL_FREQUENCIES` et le faux Gladys
+  `@gladysassistant/integration-sdk/testing`. Ce dépôt garde sa propre déduplication
+  (`publishChanged`, qui tient compte des appareils pas encore créés) et son faux Gladys
+  (`test/helpers/fakeGladys.js`) : ils sont stables, les remplacer n'apporterait rien.
+- La CI de ce dépôt a **trois jobs** (Lint & test Node 22 et 24, Docker build) : pas de job
+  « Store checks », lancer le validateur à la main.
 - `node --test` annule un test (« Promise resolution is still pending but the event loop has
   already resolved ») si la seule chose qui fait attendre est un minuteur `unref()` : ne pas
   `unref` un minuteur que le code attend, ou piloter le temps avec `t.mock.timers`.

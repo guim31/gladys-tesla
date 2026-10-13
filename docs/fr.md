@@ -227,6 +227,8 @@ encore ; la commande continue et son résultat s'affiche quand la voiture répon
 - **Les valeurs de la voiture ne changent que toutes les 30 minutes** : la
   voiture n'envoie pas de flux. Vérifiez dans la console Teslemetry que le flux
   est activé pour elle, et que son logiciel est à jour.
-- L'intégration journalise tout ce qu'elle fait : ouvrez ses logs depuis
-  l'interface de Gladys, avec `LOG_LEVEL=debug` pour le détail complet. Les
+- Les logs de l'intégration (à ouvrir depuis l'interface de Gladys) restent
+  calmes en temps normal : démarrage, perte et retour du flux temps réel,
+  erreurs (une fois quand elles commencent, une fois quand elles cessent) et vos
+  commandes. `LOG_LEVEL=debug` montre chaque lecture, état et déclencheur. Les
   jetons ne sont jamais journalisés.

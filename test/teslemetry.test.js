@@ -221,3 +221,84 @@ test('a topic filter the server refuses falls back to every topic', async () => 
   assert.ok(urls[0].searchParams.has('topics'));
   assert.equal(urls[1].searchParams.has('topics'), false);
 });
+
+function captureLines() {
+  const lines = [];
+  const logger = Object.fromEntries(
+    ['debug', 'info', 'warn', 'error'].map((level) => [
+      level,
+      (message) => lines.push({ level, message: String(message) }),
+    ]),
+  );
+  const loud = () => lines.filter((line) => line.level !== 'debug').map((line) => line.message);
+  return { lines, logger, loud };
+}
+
+/** An SSE response that stays open until the request is aborted. */
+function openSseResponse(signal) {
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"vin":"V","data":{}}\n\n'));
+        signal.addEventListener('abort', () => controller.error(signal.reason));
+      },
+    }),
+    { status: 200, headers: { 'content-type': 'text/event-stream' } },
+  );
+}
+
+test('stream logs: a routine reconnection stays in debug, an outage is logged once', async () => {
+  const { lines, logger, loud } = captureLines();
+  // Connect, two quick closes (blips), five failures in a row, then back
+  // for good.
+  const script = ['ok', 'ok', 503, 503, 503, 503, 503, 'open'];
+  let call = 0;
+  const fetchImpl = async (url, { signal }) => {
+    const step = script[Math.min(call, script.length - 1)];
+    call += 1;
+    if (step === 'open') return openSseResponse(signal);
+    if (step === 'ok') return sseResponse(['data: {"vin":"V","data":{}}\n\n']);
+    return jsonResponse(step);
+  };
+  const stream = createTeslemetryStream({
+    token: TOKEN,
+    fetchImpl,
+    logger,
+    stableMs: 20,
+    onEvent: () => {},
+    sleep: async () => {},
+  });
+  stream.start();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  await stream.stop();
+  assert.equal(call, script.length);
+  assert.deepEqual(loud(), [
+    'Teslemetry stream connected',
+    'Teslemetry stream answered 503, retrying until it comes back',
+    'Teslemetry stream connected again',
+  ]);
+  assert.ok(!lines.some((line) => line.message.includes(TOKEN)));
+});
+
+test('stream logs: a stream that keeps dropping right after connecting is an outage', async () => {
+  const { logger, loud } = captureLines();
+  let sleeps = 0;
+  const stream = createTeslemetryStream({
+    token: TOKEN,
+    fetchImpl: async () => sseResponse(['data: {"vin":"V","data":{}}\n\n']),
+    logger,
+    stableMs: 10000,
+    onEvent: () => {},
+    sleep: async () => {
+      sleeps += 1;
+      if (sleeps >= 8) stream.stop();
+    },
+  });
+  stream.start();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  await stream.stop();
+  assert.deepEqual(loud(), [
+    'Teslemetry stream connected',
+    'Teslemetry stream closed by the server, retrying until it comes back',
+  ]);
+});

@@ -149,6 +149,7 @@ export function createTesla({
   const published = new Map(); // feature external_id → serialized value
   const nudges = new Map(); // widget key → { at, timer }
   const streamingChecked = new Set();
+  const failing = new Map(); // read currently failing → kind of its error (logged once)
 
   // --- Helpers ---------------------------------------------------------------
 
@@ -216,14 +217,31 @@ export function createTesla({
     }
   }
 
-  async function reportError(err, context) {
+  // Repeated failures of the same read (network down, Teslemetry in trouble)
+  // log one line when they start and one when they stop, debug in between. A
+  // different kind of error (a refused token after a network outage) is a new
+  // failure, logged again.
+  function firstFailure(key, kind = 'error') {
+    if (failing.has(key) && failing.get(key) === kind) return false;
+    failing.set(key, kind);
+    return true;
+  }
+
+  function recovered(key, context) {
+    if (failing.delete(key)) logger.info(`${context}: working again`);
+  }
+
+  async function reportError(err, context, key = context) {
+    const level = !firstFailure(key, err.kind ?? 'error')
+      ? 'debug'
+      : err.kind === ERROR_KINDS.AUTH ||
+          err.kind === ERROR_KINDS.SUBSCRIPTION ||
+          err.kind === ERROR_KINDS.FORBIDDEN
+        ? 'error'
+        : 'warn';
+    logger[level](`${context}: ${err.message}`);
     if (err.kind === ERROR_KINDS.AUTH || err.kind === ERROR_KINDS.SUBSCRIPTION) {
-      logger.error(`${context}: ${err.message}`);
       await setStatus(false, STATUS_MESSAGES[err.kind]);
-    } else if (err.kind === ERROR_KINDS.FORBIDDEN) {
-      logger.error(`${context}: ${err.message}`);
-    } else {
-      logger.warn(`${context}: ${err.message}`);
     }
   }
 
@@ -255,9 +273,11 @@ export function createTesla({
           ),
         );
         for (const { externalId, serialized } of batch) published.set(externalId, serialized);
+        recovered('publish', 'Publishing states to Gladys');
       } catch (err) {
         // Not remembered: the next change (or reconnection) sends it again.
-        logger.warn(`Publishing ${batch.length} state(s) failed: ${err.message}`);
+        const level = firstFailure('publish', 'publish') ? 'warn' : 'debug';
+        logger[level](`Publishing ${batch.length} state(s) failed: ${err.message}`);
       }
     }
     return changed.length;
@@ -335,7 +355,7 @@ export function createTesla({
     for (const key of keys) {
       try {
         await gladys.publishSceneEvent(key, data);
-        logger.info(`Scene trigger ${key} fired for ${data.device}`);
+        logger.debug(`Scene trigger ${key} fired for ${data.device}`);
       } catch (err) {
         logger.warn(`Scene trigger ${key} failed: ${err.message}`);
       }
@@ -424,27 +444,34 @@ export function createTesla({
 
   async function readVehicle(vehicle) {
     vehicle.lastReadAt = now();
+    const failureKey = `vehicle:${vehicle.product.vin}`;
+    const context = `Reading ${vehicle.product.display_name ?? 'a vehicle'}`;
     try {
       const data = await client.vehicleData(vehicle.product.vin);
       await applyVehicle(vehicle, snapshotFromVehicleData(data));
+      recovered(failureKey, context);
     } catch (err) {
       if (err.kind === ERROR_KINDS.OFFLINE) {
         // Asleep with no cache: nothing to read, and certainly not a reason
         // to wake it.
+        recovered(failureKey, context);
         await applyVehicle(vehicle, { online: false });
         return;
       }
       if (err.kind === ERROR_KINDS.CREDITS) {
         vehicle.backoffUntil = now() + CREDITS_BACKOFF_MS;
-        logger.warn('Teslemetry: out of credits, the fallback vehicle reads pause for an hour');
+        const level = firstFailure(failureKey, ERROR_KINDS.CREDITS) ? 'warn' : 'debug';
+        logger[level]('Teslemetry: out of credits, the fallback vehicle reads pause for an hour');
         return;
       }
-      await reportError(err, `Reading ${vehicle.product.display_name ?? 'a vehicle'}`);
+      await reportError(err, context, failureKey);
     }
   }
 
   async function readSite(site, { info = false } = {}) {
     const id = site.product.energy_site_id;
+    const failureKey = `site:${id}`;
+    const context = `Reading energy site ${site.product.site_name ?? id}`;
     try {
       if (info) {
         site.lastInfoAt = now();
@@ -453,8 +480,9 @@ export function createTesla({
       }
       site.lastLiveAt = now();
       await applySite(site, snapshotFromLiveStatus((await client.siteLiveStatus(id)) ?? {}));
+      recovered(failureKey, context);
     } catch (err) {
-      await reportError(err, `Reading energy site ${site.product.site_name ?? id}`);
+      await reportError(err, context, failureKey);
     }
   }
 
@@ -493,8 +521,9 @@ export function createTesla({
     try {
       products = (await client.products()) ?? [];
       lastProductsAt = now();
+      recovered('products', 'Listing the Tesla products');
     } catch (err) {
-      await reportError(err, 'Listing the Tesla products');
+      await reportError(err, 'Listing the Tesla products', 'products');
       if (err.kind === ERROR_KINDS.NETWORK || err.kind === ERROR_KINDS.SERVER) {
         await setStatus(false, STATUS_MESSAGES.unreachable);
       }
@@ -582,7 +611,7 @@ export function createTesla({
     }
     if (event.credits && typeof event.credits === 'object') {
       credits = { ...event.credits, at: new Date(now()).toISOString() };
-      logger.info(
+      logger.debug(
         `Teslemetry credits: ${event.credits.name ?? event.credits.type ?? 'call'} cost ${
           event.credits.cost ?? '?'
         }, balance ${event.credits.balance ?? '?'}`,
@@ -603,9 +632,9 @@ export function createTesla({
       token: config.access_token,
       onEvent: onStreamEvent,
       logger,
+      // The stream logs its own losses and recoveries, once each.
       onConnectionChange: (value) => {
         streamConnected = value;
-        logger.info(value ? 'Teslemetry stream connected' : 'Teslemetry stream disconnected');
       },
     });
     stream.start();
@@ -648,6 +677,7 @@ export function createTesla({
     stream = null;
     client = null;
     streamConnected = false;
+    failing.clear();
     await streamQueue;
     await store.flush();
   }
