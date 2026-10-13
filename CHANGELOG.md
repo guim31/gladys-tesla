@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-13
+
 ### Changed
 
 - Quieter logs: the readings, the published states, the credit balance and the
@@ -87,7 +89,8 @@ the notes of the version's GitHub Release.
 - A _Test the connection_ action, showing the vehicles, energy sites, stream
   status and Teslemetry credit balance.
 
-[Unreleased]: https://github.com/guim31/gladys-tesla/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/guim31/gladys-tesla/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/guim31/gladys-tesla/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/guim31/gladys-tesla/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/guim31/gladys-tesla/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/guim31/gladys-tesla/compare/v1.0.1...v1.1.0

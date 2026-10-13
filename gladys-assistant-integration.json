@@ -8,8 +8,8 @@
     "de": "Tesla-Autos und Powerwall über Teslemetry: Laden, Klima, Schlösser, Solar, Energieflüsse.",
     "es": "Coches Tesla y Powerwall con Teslemetry: carga, climatización, cierres, solar, flujos de energía."
   },
-  "version": "1.3.0",
-  "docker_image": "ghcr.io/guim31/gladys-tesla:1.3.0",
+  "version": "1.3.1",
+  "docker_image": "ghcr.io/guim31/gladys-tesla:1.3.1",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/guim31/gladys-tesla/main/cover.png",
   "categories": ["energy"],
