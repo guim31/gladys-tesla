@@ -10,6 +10,14 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-22
+
+### Security
+
+- Rebuilt on Node.js 24.22.1, the October 2026 security release (remote code
+  execution in the Brotli decoder, CVE-2026-111497; TLS hostname and DNS
+  fixes).
+
 ## [1.3.1] - 2026-10-13
 
 ### Changed
@@ -89,7 +97,8 @@ the notes of the version's GitHub Release.
 - A _Test the connection_ action, showing the vehicles, energy sites, stream
   status and Teslemetry credit balance.
 
-[Unreleased]: https://github.com/guim31/gladys-tesla/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/guim31/gladys-tesla/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/guim31/gladys-tesla/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/guim31/gladys-tesla/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/guim31/gladys-tesla/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/guim31/gladys-tesla/compare/v1.1.0...v1.2.0
