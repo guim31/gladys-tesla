@@ -118,7 +118,10 @@ voiture les renvoie. Voiture déjà ajoutée ? Cliquez sur **Mettre à jour** da
 l'onglet Découverte pour les ajouter. Pour être prévenu, créez une scène
 déclenchée par **Pression des pneus basse**, ou par une pression sous votre
 seuil (la pression baisse par temps froid : gardez de la marge). La voiture
-mesure ses pressions en roulant : à l'arrêt, c'est la dernière mesure.
+mesure ses pressions en roulant : à l'arrêt, c'est la dernière mesure. Les
+pressions suivent le flux temps réel ; l'alerte de pression basse est mise à
+jour par les lectures de la voiture (au démarrage et lectures de secours) :
+elle peut avoir du retard.
 
 Cette version de l'intégration **ne lit jamais** la position de la voiture.
 

@@ -759,3 +759,25 @@ test('tyre pressures: discovered when the car reports them, published in the car
   assert.equal(gladys.last(`${model3}:tire-pressure-front-right`), 36.3);
   await tesla.stop();
 });
+
+test('tyre features never vanish once created, even from a car with no data', async () => {
+  const { gladys, tesla } = await setup();
+  const model3 = vehicleId(VINS.MODEL_3);
+  const created = gladys.devices;
+  await tesla.stop();
+  // Restart: the car sleeps with no cache, its snapshot holds no pressure.
+  const client = createFakeClient();
+  client.failWith('vehicleData', new TeslemetryError('offline', { kind: 'offline', status: 408 }));
+  const restarted = await setup({ client, created: false });
+  restarted.gladys.devices = created;
+  await restarted.tesla.reconfigure(normalizeConfig({ access_token: 'test-token' }));
+  const device = restarted.gladys.discovered.find((d) => d.external_id === model3);
+  assert.equal(device.features.filter((f) => f.type === 'tire-pressure').length, 4);
+  assert.ok(device.features.some((f) => f.external_id === `${model3}:tire-pressure-low`));
+  // Without the created device, a car that never reported gets none.
+  restarted.gladys.devices = [];
+  await restarted.tesla.reconfigure(normalizeConfig({ access_token: 'test-token' }));
+  const fresh = restarted.gladys.discovered.find((d) => d.external_id === model3);
+  assert.ok(!fresh.features.some((f) => f.type === 'tire-pressure'));
+  await restarted.tesla.stop();
+});

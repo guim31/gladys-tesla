@@ -111,7 +111,9 @@ reports them. Already added your car? Click **Update** on it in the Discovery
 tab to add them. To be warned, create a scene triggered by **Low tire
 pressure**, or by a pressure below your threshold (a pressure reads low on a
 cold morning: leave some margin). The car measures its pressures while
-driving: a parked car shows its last reading.
+driving: a parked car shows its last reading. The pressures follow the
+real-time stream; the low pressure alert is refreshed by the car reads (at
+startup and the backup reads), so it can lag behind.
 
 The car's location is **never read** by this version of the integration.
 
