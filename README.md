@@ -48,7 +48,8 @@ unplugged, grid outage / restored. **Scene action**: set the Powerwall backup
 reserve.
 
 The user documentation, with the full feature list, the setup and the costs, is
-in [`docs/en.md`](docs/en.md) ([`docs/fr.md`](docs/fr.md) in French); Gladys
+in [`docs/en.md`](docs/en.md) (also in [French](docs/fr.md),
+[German](docs/de.md) and [Spanish](docs/es.md)); Gladys
 links to it from the integration's Configuration screen.
 
 ## Prerequisites

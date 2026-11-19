@@ -17,6 +17,7 @@ the notes of the version's GitHub Release.
   sensor that turns on when the car warns of an under-inflated or flat tire.
   Both appear only when the car reports them; on a car already added, click
   **Update** in the Discovery tab.
+- The documentation in German and Spanish.
 
 ## [1.3.2] - 2026-10-22
 

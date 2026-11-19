@@ -284,3 +284,15 @@ test('every inline multi-language object in the source has its four languages', 
   }
   assert.deepEqual(issues, []);
 });
+
+test('the four docs exist and keep the same sections', () => {
+  const headings = (lang) =>
+    readFileSync(new URL(`../docs/${lang}.md`, import.meta.url), 'utf8')
+      .split('\n')
+      .filter((line) => /^#{1,6} /.test(line))
+      .map((line) => line.match(/^#+/)[0].length);
+  const reference = headings('en');
+  for (const lang of ['fr', 'de', 'es']) {
+    assert.deepEqual(headings(lang), reference, `docs/${lang}.md sections differ from docs/en.md`);
+  }
+});
