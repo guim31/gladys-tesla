@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   CHARGING_STATION_STATE,
   VEHICLE_FEATURES as F,
+  STREAMING_FIELDS,
   buildVehicleDevice,
+  hasTirePressures,
   isPlugged,
   snapshotFromStreamData,
   snapshotFromVehicleData,
@@ -170,4 +172,132 @@ test('the device keys its external ids on the VIN, never on the name', () => {
     units: vehicleUnits('metric'),
   });
   assert.deepEqual(onOtherCharger, device, 'the structure does not depend on live values');
+});
+
+// --- Tyre pressures ----------------------------------------------------------
+
+const tirePressureOf = (snapshot, unit) =>
+  Object.fromEntries(
+    vehicleStates(snapshot, () => unit)
+      .filter(({ key }) => key.startsWith('tire-pressure'))
+      .map(({ key, value }) => [key, value]),
+  );
+
+test('tyre pressures and TPMS warnings from vehicle_data, in bar', () => {
+  const snapshot = snapshotFromVehicleData(fixture('vehicle_data_model3').response);
+  assert.equal(snapshot.tirePressureFl, 2.775);
+  assert.equal(snapshot.tirePressureFr, 2.8);
+  assert.equal(snapshot.tirePressureLow, false);
+  assert.equal(snapshot.pressureUnit, 'psi'); // gui_tirepressure_units "Psi"
+  assert.ok(hasTirePressures(snapshot));
+  assert.deepEqual(tirePressureOf(snapshot, 'bar'), {
+    [F.TIRE_PRESSURE_FRONT_LEFT]: 2.78,
+    [F.TIRE_PRESSURE_FRONT_RIGHT]: 2.8,
+    [F.TIRE_PRESSURE_REAR_LEFT]: 2.78,
+    [F.TIRE_PRESSURE_REAR_RIGHT]: 2.78,
+    [F.TIRE_PRESSURE_LOW]: 0,
+  });
+  const psi = tirePressureOf(snapshot, 'psi');
+  assert.equal(psi[F.TIRE_PRESSURE_FRONT_RIGHT], 40.6); // 2.8 bar
+  assert.equal(tirePressureOf(snapshot, 'kPa')[F.TIRE_PRESSURE_FRONT_RIGHT], 280);
+});
+
+test('one soft or hard TPMS warning raises the low pressure alert', () => {
+  const data = fixture('vehicle_data_model3').response;
+  for (const field of ['tpms_soft_warning_rl', 'tpms_hard_warning_fr']) {
+    const warned = {
+      ...data,
+      vehicle_state: { ...data.vehicle_state, [field]: true },
+    };
+    assert.equal(snapshotFromVehicleData(warned).tirePressureLow, true, field);
+  }
+});
+
+test('a car without TPMS data publishes no tyre feature', () => {
+  const data = fixture('vehicle_data_model3').response;
+  const vehicleState = Object.fromEntries(
+    Object.entries(data.vehicle_state).filter(([key]) => !key.startsWith('tpms_')),
+  );
+  const snapshot = snapshotFromVehicleData({ ...data, vehicle_state: vehicleState });
+  assert.equal(hasTirePressures(snapshot), false);
+  assert.equal(snapshot.tirePressureLow, undefined);
+  assert.deepEqual(tirePressureOf(snapshot, 'bar'), {});
+  const gladys = createFakeGladys();
+  const device = buildVehicleDevice(gladys, fixture('products').response[0], {
+    language: 'en',
+    units: vehicleUnits('metric'),
+  });
+  assert.ok(!device.features.some((f) => f.external_id.includes(':tire-pressure')));
+});
+
+test('tyre features: four pressures and the alert, keys and bounds', () => {
+  const gladys = createFakeGladys();
+  const product = fixture('products').response[0];
+  const build = (units) =>
+    buildVehicleDevice(gladys, product, {
+      language: 'fr',
+      units: vehicleUnits(units),
+      tires: true,
+      tireWarning: true,
+    });
+  const device = build('metric');
+  const tires = device.features.filter((f) => f.type === 'tire-pressure');
+  assert.deepEqual(
+    tires.map((f) => f.external_id.split(':').pop()),
+    [
+      'tire-pressure-front-left',
+      'tire-pressure-front-right',
+      'tire-pressure-rear-left',
+      'tire-pressure-rear-right',
+    ],
+  );
+  for (const f of tires) {
+    assert.equal(f.category, 'electrical-vehicle-state');
+    assert.equal(f.unit, 'bar');
+    assert.equal(f.min, 0);
+    assert.equal(f.max, 5);
+    assert.equal(f.read_only, true);
+    assert.equal(f.has_feedback, false);
+  }
+  assert.equal(tires[0].name, 'Pression pneu avant gauche');
+  const low = device.features.find((f) => f.external_id.endsWith(':tire-pressure-low'));
+  assert.equal(low.category, 'input');
+  assert.equal(low.type, 'binary');
+  assert.equal(low.has_feedback, false);
+  const imperial = build('imperial').features.find((f) => f.type === 'tire-pressure');
+  assert.equal(imperial.unit, 'psi');
+  assert.equal(imperial.max, 70);
+  // Existing features keep their ids: the tyres only add.
+  const without = buildVehicleDevice(gladys, product, {
+    language: 'fr',
+    units: vehicleUnits('metric'),
+  });
+  assert.deepEqual(
+    device.features.slice(0, without.features.length).map((f) => f.external_id),
+    without.features.map((f) => f.external_id),
+  );
+});
+
+test('tyre pressures from the stream, and the car pressure unit', () => {
+  const snapshot = snapshotFromStreamData(
+    {
+      TpmsPressureFl: 2.9,
+      TpmsPressureRr: '2.85',
+      SettingTirePressureUnit: 'PressureUnitBar',
+    },
+    { tirePressureFr: 2.8, pressureUnit: 'psi' },
+  );
+  assert.equal(snapshot.tirePressureFl, 2.9);
+  assert.equal(snapshot.tirePressureFr, 2.8, 'previous value kept');
+  assert.equal(snapshot.tirePressureRr, 2.85);
+  assert.equal(snapshot.pressureUnit, 'bar');
+  for (const field of [
+    'TpmsPressureFl',
+    'TpmsPressureFr',
+    'TpmsPressureRl',
+    'TpmsPressureRr',
+    'SettingTirePressureUnit',
+  ]) {
+    assert.ok(STREAMING_FIELDS.includes(field), field);
+  }
 });

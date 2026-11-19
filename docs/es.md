@@ -1,0 +1,248 @@
+# Teslemetry
+
+Siga y controle sus coches Tesla, su Powerwall y sus paneles solares desde
+Gladys a través de **Teslemetry**: batería, autonomía, carga, climatización,
+cierres, Modo Centinela y los flujos de energía de su casa en tiempo real.
+
+> **Desarrollada sin el hardware: se agradecen sus comentarios.** Esta
+> integración se creó sin un coche, sin un Powerwall y sin una cuenta de
+> Teslemetry, y se probó con respuestas de ejemplo de la API adaptadas de las
+> pruebas de la integración Teslemetry de Home Assistant y de la documentación
+> de la API Fleet de Tesla. Si algo le parece incorrecto, indíquelo en el foro de
+> Gladys.
+
+Esta integración no está afiliada a Tesla, Inc. ni a Teslemetry.
+
+Lleva el nombre del servicio por el que pasa. Otras formas de acceder a un Tesla
+(Tessie, TeslaMate, la API Fleet directamente…) podrían tener su propia
+integración.
+
+## Wall Connector: ahora tiene su propia integración
+
+La versión 1.1.0 de esta integración (entonces llamada «Tesla») también leía el
+**Tesla Wall Connector** de la red doméstica. El cargador ahora tiene su propia
+integración, **Tesla Wall Connector**, que no necesita Teslemetry en absoluto.
+Si ya había configurado uno:
+
+1. Instale **Tesla Wall Connector** desde la tienda de Gladys e introduzca la
+   dirección del cargador en su pestaña **Configuración**.
+2. Su dispositivo de cargador, su historial y los paneles que lo muestran se
+   conservan: la nueva integración usa los mismos identificadores de
+   dispositivo.
+3. Las escenas que usaban los disparadores _Wall Connector_ y el widget _Tesla
+   Wall Connector_ deben configurarse de nuevo con la nueva integración.
+
+Hasta entonces, esta integración muestra un recordatorio en su estado de
+conexión y en los registros, y no toca el cargador.
+
+## Cómo se conecta
+
+La API oficial de Tesla (la API Fleet) está pensada para desarrolladores: cada
+usuario tendría que registrar una aplicación de desarrollador, alojar una clave
+pública en un dominio web y firmar cada comando. **Teslemetry** se encarga de
+todo eso y le da un único token de acceso. Es un **servicio de pago** con una
+suscripción por vehículo y por sitio de energía (consulte
+[teslemetry.com/pricing](https://teslemetry.com/pricing)), que incluye una
+asignación mensual de créditos de comandos.
+
+La lectura de datos **nunca despierta su coche**. Un coche dormido conserva en
+Gladys sus últimos valores conocidos; solo un comando que usted envíe (iniciar
+la carga, climatización, bloqueo…) lo despierta.
+
+## Qué necesita
+
+- Gladys **5.1** o posterior.
+- Una cuenta de [Teslemetry](https://teslemetry.com) vinculada a su cuenta de
+  Tesla, con una suscripción para cada coche y cada sitio de energía que quiera
+  en Gladys.
+- Para los comandos: la **llave virtual** de Teslemetry añadida a cada coche
+  (Teslemetry le guía, lleva un minuto desde la aplicación de Tesla).
+- Para los datos del coche en tiempo real: la transmisión de Fleet Telemetry,
+  compatible con los coches recientes (requiere una versión de software
+  reciente; los Model S y Model X anteriores a 2021 no la admiten). Los coches
+  sin transmisión funcionan igualmente, con los datos en caché de Teslemetry.
+
+## Configuración
+
+1. En la consola de Teslemetry, cree un **token de acceso** con acceso a sus
+   vehículos y sitios de energía. Cópielo.
+2. En Gladys, abra la pestaña **Configuración** de la integración Teslemetry,
+   pegue el token en **Token de acceso de Teslemetry**, revise los demás ajustes
+   y guarde.
+3. Abra la pestaña **Descubrir**: se muestran todos los coches y todos los sitios
+   de energía. Añada los que desee.
+4. Opcional: haga clic en **Probar la conexión** para ver a qué da acceso
+   Teslemetry y si la transmisión en tiempo real está conectada.
+
+La integración también activa, en Teslemetry, la transmisión de los pocos
+valores del coche que lee (batería, autonomía, carga, climatización, cierres,
+Modo Centinela, cuentakilómetros, unidades de pantalla). Solo añade campos,
+nunca elimina los suyos.
+
+### Ajustes
+
+| Ajuste                                               | Qué hace                                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Unidades**                                         | Unidades de distancias y temperaturas **tal como las almacenan y comparan las escenas**: el ajuste de pantalla del propio coche (por defecto), millas y °F, o kilómetros y °C. El panel siempre muestra las unidades preferidas de cada usuario, sea cual sea su elección. |
+| **Idioma de los nombres de dispositivos**            | Nombres en inglés, francés, alemán o español para las funcionalidades de los nuevos dispositivos. Gladys conserva el nombre de una funcionalidad una vez creado el dispositivo.                                                                                            |
+| **Lectura de respaldo de los coches**                | Con qué frecuencia se lee un coche **despierto** que no transmite nada (30 o 60 minutos, o nunca). Nunca mientras el coche duerme.                                                                                                                                         |
+| **Enviar el consumo de la casa al panel de energía** | Desactivado por defecto. Añade el índice de consumo de la casa a los sitios Powerwall (véase más abajo).                                                                                                                                                                   |
+
+Si cambia **Unidades** en un coche que ya añadió, la pestaña Descubrir le
+ofrece una **Actualización** para él. Hasta que la acepte, el coche sigue
+publicándose en sus unidades anteriores, de modo que nada se mezcla.
+
+## Sus coches
+
+| Funcionalidad                   | Detalles                                                                                              |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Nivel de batería                | %                                                                                                     |
+| Autonomía                       | Autonomía estimada, en millas o km                                                                    |
+| Estado de carga                 | Cargando, conectado, en pausa por el coche, en pausa por el cargador (sin energía), inactivo          |
+| Potencia de carga               | kW, CA o CC (Supercharger)                                                                            |
+| Límite de carga                 | De 50 a 100 %, **ajustable**                                                                          |
+| Carga                           | **Iniciar / detener** la carga                                                                        |
+| Corriente de carga              | Amperios solicitados al cargador, **ajustable** (útil para cargar con excedente solar)                |
+| Enchufado                       | Sí / no                                                                                               |
+| Climatización                   | **Activada / desactivada**                                                                            |
+| Consigna de climatización       | **Ajustable**, 59–82 °F (15–28 °C)                                                                    |
+| Temperatura interior / exterior | °F o °C                                                                                               |
+| Bloqueo                         | **Bloquear / desbloquear**                                                                            |
+| Modo Centinela                  | **Activado / desactivado**                                                                            |
+| Cuentakilómetros                | Millas o km                                                                                           |
+| En línea (despierto)            | Activado cuando el coche está despierto, desactivado mientras duerme o está fuera de cobertura        |
+| Presión de neumáticos (×4)      | Delantero izquierdo / derecho, trasero izquierdo / derecho: bar, psi o kPa (como la muestra el coche) |
+| Presión de neumáticos baja      | Activado cuando el coche avisa de un neumático con poca presión o pinchado                            |
+
+Las cuatro presiones de neumáticos y la alerta de presión baja solo aparecen
+cuando el coche las comunica. ¿Ya añadió su coche? Haga clic en **Actualizar** en
+la pestaña Descubrir para añadirlas. Para recibir un aviso, cree una escena
+activada por **Presión de neumáticos baja**, o por una presión inferior a su
+umbral (la presión baja en las mañanas frías: deje algo de margen). El coche
+mide sus presiones mientras circula: un coche aparcado muestra su última
+lectura. Las presiones siguen la transmisión en tiempo real; la alerta de
+presión baja se actualiza con las lecturas del coche (al arrancar y las lecturas
+de respaldo), por lo que puede ir con retraso.
+
+La ubicación del coche **nunca se lee** en esta versión de la integración.
+
+## Su Powerwall y sus paneles solares
+
+Cada sitio de energía recibe las funcionalidades de lo que tiene: un sitio solo
+solar no tiene funcionalidades de batería, y un Powerwall sin paneles no tiene
+las solares.
+
+| Funcionalidad                      | Detalles                                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Producción solar                   | W                                                                                                      |
+| Consumo de la casa                 | W, medido por la pasarela                                                                              |
+| Red (importación +, exportación −) | W, **con signo**: positivo cuando toma de la red, negativo cuando envía energía a la red               |
+| Carga / descarga de la batería     | W, dos funcionalidades (ambas positivas)                                                               |
+| Carga del Powerwall                | %                                                                                                      |
+| Red conectada                      | Desactivado durante un corte (la casa funciona con el Powerwall)                                       |
+| Modo de funcionamiento             | Autoconsumo o Control basado en horario, **ajustable**                                                 |
+| Índices de energía                 | kWh acumulados: producción solar, importación y exportación de la red, batería (casa: véase más abajo) |
+
+El modo «Solo respaldo» no se ofrece: Tesla lo retiró en muchos sitios. Un sitio
+configurado así desde la aplicación de Tesla muestra «Solo respaldo» en el
+widget de energía.
+
+El **índice de consumo de la casa** está **desactivado por defecto**: active
+**Enviar el consumo de la casa al panel de energía** en los ajustes y acepte la
+**Actualización** del sitio en la pestaña Descubrir. Gladys calcula entonces el
+consumo por media hora y su coste a partir de él, con su contrato de energía.
+Gladys lo asocia al contador eléctrico principal que haya definido en los
+ajustes de energía: si su contador de la compañía eléctrica ya está en Gladys,
+el Powerwall mide la misma casa, así que deje la opción desactivada para no
+contar la casa dos veces. El índice sigue contando mientras la opción está
+desactivada, de modo que activarla más tarde no empieza desde cero. Los índices
+empiezan a contar cuando se instala la integración: Tesla no proporciona totales
+históricos, se construyen a partir de los totales diarios que transmite
+Teslemetry.
+
+## Panel
+
+Dos widgets (Gladys 5.1+), cada uno configurado con el dispositivo que muestra:
+
+- **Vehículo Tesla**: batería, autonomía, potencia de carga y temperatura del
+  habitáculo en tiempo real, el estado de la carga, la climatización, los
+  cierres, el Modo Centinela y la conexión, y botones para activar o desactivar
+  la climatización, iniciar o detener la carga (cuando el coche está enchufado),
+  bloquear o desbloquear (desbloquear pide confirmación).
+- **Flujo de energía Tesla**: solar, casa, red y Powerwall en tiempo real, las
+  últimas 24 horas en un gráfico, el estado de la red, el modo de
+  funcionamiento, la reserva de respaldo y la alerta de tormenta.
+
+## Escenas
+
+Disparadores (cada uno puede limitarse opcionalmente a un coche o a un sitio de
+energía):
+
+- **El Tesla ha empezado a cargar**, **Carga del Tesla completada**,
+  **Tesla enchufado**, **Tesla desenchufado** — con el nivel de batería.
+- **Corte de red (Powerwall)** y **Red restablecida (Powerwall)** — con la carga
+  del Powerwall y si el corte es una «desconexión de la red» intencionada.
+
+Acción:
+
+- **Ajustar la reserva de respaldo del Powerwall** — por ejemplo 100 % cuando se
+  anuncia una tormenta, y de vuelta a 20 % después.
+
+Todas las funcionalidades del coche anteriores también pueden usarse en escenas
+de la forma habitual («cuando la batería esté por debajo del 30 %», «activar la
+climatización a las 7:30», «ajustar el límite de carga al 90 %»…).
+
+## Frescura de los datos y costes de Teslemetry
+
+Lo que sigue son las reglas publicadas por Teslemetry (2026). **No pudieron
+medirse en una cuenta real durante el desarrollo**: para ver sus propios costes,
+la integración escribe una línea en sus registros por cada llamada facturada,
+con su saldo restante (`Teslemetry credits: … cost 1, balance 498`), y **Probar
+la conexión** muestra el saldo.
+
+| Qué                                                                        | Cuándo                                                                                    | Coste                                                                                                                    |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Transmisión en tiempo real (coches, Powerwall, totales diarios de energía) | De forma continua, una conexión para toda la cuenta                                       | Incluida en las suscripciones, sin créditos                                                                              |
+| Lectura del coche al arrancar                                              | Una vez por coche al iniciarse la integración                                             | Gratis desde la caché de Teslemetry; hasta 2 créditos si el coche está despierto y su caché tiene más de unos 20 minutos |
+| Lectura de respaldo del coche                                              | Un coche despierto que no transmitió nada durante el retraso elegido (30 min por defecto) | Igual que arriba. Nunca para un coche dormido, ni para un coche que transmite                                            |
+| Lista de vehículos, estado del Powerwall                                   | Cada 15 / 10 minutos, **solo mientras la transmisión está caída**                         | Gratis según lo previsto (llamadas de lectura, sin verificar)                                                            |
+| Comando (carga, climatización, bloqueo, límite de carga, reserva…)         | Cuando usted lo pide                                                                      | 1 crédito; si el coche duerme, se despierta primero (unos 20 créditos más)                                               |
+
+En la práctica, con un coche que transmite, el único coste de la integración son
+los comandos que usted envía. La asignación mensual de Teslemetry es de 500
+créditos por vehículo y por sitio de energía: unos 500 comandos a un coche
+despierto, o unos 24 a uno dormido. Gladys confirma un comando a los 4 segundos
+aunque el coche aún esté despertando; el comando continúa y su resultado se
+muestra cuando el coche responde.
+
+## Limitaciones
+
+- Desarrollada sin un coche, sin un Powerwall y sin una cuenta de Teslemetry
+  (véase arriba).
+- Sin ubicación, sin navegación, sin maletero, ventanillas ni asientos
+  calefactables en esta versión.
+- Gladys no tiene potencia de batería con signo: la potencia del Powerwall se
+  divide en «carga» y «descarga». La reserva de respaldo tampoco tiene una
+  funcionalidad de dispositivo: se muestra en el widget de energía y se ajusta
+  con la acción de escena.
+- Los coches antiguos sin Fleet Telemetry se actualizan solo desde la caché de
+  Teslemetry (cada 30 o 60 minutos mientras están despiertos).
+- Los nombres de las funcionalidades se fijan al crear el dispositivo y no
+  siguen los cambios de idioma posteriores.
+
+## Solución de problemas
+
+- **«Teslemetry rechazó el token de acceso»**: el token se escribió mal, se
+  revocó o caducó. Cree uno nuevo en la consola de Teslemetry.
+- **«Se requiere una suscripción»**: el coche o el sitio no tiene una
+  suscripción activa de Teslemetry.
+- **Un comando falla con «vehículo no disponible»**: el coche está fuera de
+  cobertura, o la llave virtual no está instalada en él.
+- **Los valores del coche solo cambian cada 30 minutos**: el coche no transmite.
+  Compruebe que la transmisión está activada para él en la consola de Teslemetry
+  y que su software está actualizado.
+- Los registros de la integración (ábralos desde la interfaz de Gladys) se
+  mantienen en silencio en uso normal: arranque, transmisión en tiempo real
+  perdida y recuperada, errores (una vez cuando empiezan, una vez cuando
+  terminan) y sus comandos. `LOG_LEVEL=debug` muestra cada lectura, estado y
+  disparador. Los tokens nunca se registran.

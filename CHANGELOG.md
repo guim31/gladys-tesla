@@ -10,6 +10,15 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Tire pressures of the car, front left, front right, rear left and rear
+  right (bar, psi or kPa, as the car shows them), and a **Low tire pressure**
+  sensor that turns on when the car warns of an under-inflated or flat tire.
+  Both appear only when the car reports them; on a car already added, click
+  **Update** in the Discovery tab.
+- The documentation in German and Spanish.
+
 ## [1.3.2] - 2026-10-22
 
 ### Security

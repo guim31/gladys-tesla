@@ -71,6 +71,36 @@ export const TEXTS = {
     de: 'Online (wach)',
     es: 'En línea (despierto)',
   },
+  tirePressureFrontLeft: {
+    en: 'Tire pressure front left',
+    fr: 'Pression pneu avant gauche',
+    de: 'Reifendruck vorne links',
+    es: 'Presión neumático delantero izquierdo',
+  },
+  tirePressureFrontRight: {
+    en: 'Tire pressure front right',
+    fr: 'Pression pneu avant droit',
+    de: 'Reifendruck vorne rechts',
+    es: 'Presión neumático delantero derecho',
+  },
+  tirePressureRearLeft: {
+    en: 'Tire pressure rear left',
+    fr: 'Pression pneu arrière gauche',
+    de: 'Reifendruck hinten links',
+    es: 'Presión neumático trasero izquierdo',
+  },
+  tirePressureRearRight: {
+    en: 'Tire pressure rear right',
+    fr: 'Pression pneu arrière droit',
+    de: 'Reifendruck hinten rechts',
+    es: 'Presión neumático trasero derecho',
+  },
+  tirePressureLow: {
+    en: 'Low tire pressure',
+    fr: 'Pression des pneus basse',
+    de: 'Reifendruck niedrig',
+    es: 'Presión de neumáticos baja',
+  },
   // Energy site features
   solarPower: {
     en: 'Solar production',

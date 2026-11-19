@@ -20,7 +20,7 @@ import {
   DEVICE_FEATURE_UNITS as UNITS,
 } from '@gladysassistant/integration-sdk';
 import { t } from '../i18n.js';
-import { distanceIn, round, temperatureIn, temperatureToCelsius } from '../units.js';
+import { distanceIn, pressureIn, round, temperatureIn, temperatureToCelsius } from '../units.js';
 
 export const VEHICLE_DEVICE_TYPE = 'vehicle';
 
@@ -42,7 +42,49 @@ export const VEHICLE_FEATURES = {
   SENTRY_MODE: 'sentry-mode',
   ODOMETER: 'odometer',
   AWAKE: 'awake',
+  TIRE_PRESSURE_FRONT_LEFT: 'tire-pressure-front-left',
+  TIRE_PRESSURE_FRONT_RIGHT: 'tire-pressure-front-right',
+  TIRE_PRESSURE_REAR_LEFT: 'tire-pressure-rear-left',
+  TIRE_PRESSURE_REAR_RIGHT: 'tire-pressure-rear-right',
+  TIRE_PRESSURE_LOW: 'tire-pressure-low',
 };
+
+// The four tyres: feature key, snapshot field (bar), vehicle_data suffix,
+// Fleet Telemetry field, i18n key.
+export const TIRES = [
+  {
+    key: VEHICLE_FEATURES.TIRE_PRESSURE_FRONT_LEFT,
+    field: 'tirePressureFl',
+    suffix: 'fl',
+    stream: 'TpmsPressureFl',
+    name: 'tirePressureFrontLeft',
+  },
+  {
+    key: VEHICLE_FEATURES.TIRE_PRESSURE_FRONT_RIGHT,
+    field: 'tirePressureFr',
+    suffix: 'fr',
+    stream: 'TpmsPressureFr',
+    name: 'tirePressureFrontRight',
+  },
+  {
+    key: VEHICLE_FEATURES.TIRE_PRESSURE_REAR_LEFT,
+    field: 'tirePressureRl',
+    suffix: 'rl',
+    stream: 'TpmsPressureRl',
+    name: 'tirePressureRearLeft',
+  },
+  {
+    key: VEHICLE_FEATURES.TIRE_PRESSURE_REAR_RIGHT,
+    field: 'tirePressureRr',
+    suffix: 'rr',
+    stream: 'TpmsPressureRr',
+    name: 'tirePressureRearRight',
+  },
+];
+
+// Display bounds of a tyre pressure (well above any car tyre).
+export const TIRE_PRESSURE_MAX = { bar: 5, psi: 70, kPa: 500 };
+const PRESSURE_DECIMALS = { bar: 2, psi: 1, kPa: 0 };
 
 // Charge session states, the Gladys `charging-station/charging-state` enum
 // (OCPP 2.x ChargingStateEnumType values, translated by the Gladys front).
@@ -140,7 +182,18 @@ export function snapshotFromVehicleData(data = {}) {
   const gui = data.gui_settings ?? {};
   const chargingState =
     typeof charge.charging_state === 'string' ? charge.charging_state : undefined;
+  const tires = Object.fromEntries(
+    TIRES.map(({ field, suffix }) => [field, num(vehicle[`tpms_pressure_${suffix}`])]),
+  );
+  // Low pressure: any soft (under-inflated) or hard (flat) TPMS warning. Only
+  // known when the car reports the warnings at all.
+  const warnings = TIRES.flatMap(({ suffix }) => [
+    bool(vehicle[`tpms_soft_warning_${suffix}`]),
+    bool(vehicle[`tpms_hard_warning_${suffix}`]),
+  ]).filter((w) => w !== undefined);
   return compact({
+    ...tires,
+    tirePressureLow: warnings.length ? warnings.includes(true) : undefined,
     online: data.state ? data.state === 'online' : undefined,
     batteryLevel: num(charge.battery_level),
     rangeMiles: num(charge.battery_range),
@@ -168,7 +221,18 @@ export function snapshotFromVehicleData(data = {}) {
       : undefined,
     temperatureUnit:
       gui.gui_temperature_units === 'F' ? 'F' : gui.gui_temperature_units ? 'C' : undefined,
+    pressureUnit: pressureUnitOf(gui.gui_tirepressure_units),
   });
+}
+
+/** "Psi" / "Bar" / "kPa" (vehicle_data) or "PressureUnitPsi" (stream) → psi | bar | kPa. */
+function pressureUnitOf(value) {
+  if (typeof value !== 'string') return undefined;
+  const v = value.toLowerCase();
+  if (v.endsWith('psi')) return 'psi';
+  if (v.endsWith('kpa')) return 'kPa';
+  if (v.endsWith('bar')) return 'bar';
+  return undefined;
 }
 
 const isCharging = (state) => state === 'Charging' || state === 'Starting';
@@ -217,6 +281,12 @@ export function snapshotFromStreamData(data = {}, previous = {}) {
     if (unit === 'Fahrenheit') next.temperatureUnit = 'F';
     if (unit === 'Celsius') next.temperatureUnit = 'C';
   }
+  for (const { field, stream } of TIRES) {
+    if (has(stream)) next[field] = num(data[stream]);
+  }
+  if (has('SettingTirePressureUnit')) {
+    next.pressureUnit = pressureUnitOf(data.SettingTirePressureUnit);
+  }
   const merged = { ...previous, ...compact(next) };
   if (
     next.chargingState !== undefined ||
@@ -252,7 +322,13 @@ export const STREAMING_FIELDS = [
   'Odometer',
   'SettingDistanceUnit',
   'SettingTemperatureUnit',
+  ...TIRES.map(({ stream }) => stream),
+  'SettingTirePressureUnit',
 ];
+
+/** The car reports its tyre pressures (TPMS). */
+export const hasTirePressures = (snapshot = {}) =>
+  TIRES.some(({ field }) => Number.isFinite(snapshot[field]));
 
 /** Plugged in: any charge state but "Disconnected". */
 export function isPlugged(snapshot) {
@@ -266,9 +342,16 @@ export function isPlugged(snapshot) {
  * The discovery payload of one car.
  * @param {object} gladys SDK instance
  * @param {object} product entry of /api/1/products (vin, display_name, vehicle_config)
- * @param {{ language: string, units: { distance: string, temperature: string } }} options
+ * @param {{ language: string, units: { distance: string, temperature: string, pressure?: string },
+ *   tires?: boolean, tireWarning?: boolean }} options `tires` / `tireWarning`:
+ *   publish the tyre pressures / the low pressure alert (only when the car
+ *   reports them)
  */
-export function buildVehicleDevice(gladys, product, { language, units }) {
+export function buildVehicleDevice(
+  gladys,
+  product,
+  { language, units, tires = false, tireWarning = false },
+) {
   const ids = vehicleIds(gladys, product.vin);
   const model = vehicleModel(product);
   const tempF = units.temperature === UNITS.FAHRENHEIT;
@@ -399,6 +482,30 @@ export function buildVehicleDevice(gladys, product, { language, units }) {
         { unit: units.distance, max: 2000000 },
       ),
       feature(VEHICLE_FEATURES.AWAKE, 'awake', CATEGORIES.INPUT, TYPES.INPUT.BINARY),
+      ...(tires
+        ? TIRES.map(({ key, name }) =>
+            feature(
+              key,
+              name,
+              CATEGORIES.ELECTRICAL_VEHICLE_STATE,
+              TYPES.ELECTRICAL_VEHICLE_STATE.TIRE_PRESSURE,
+              {
+                unit: units.pressure ?? UNITS.BAR,
+                max: TIRE_PRESSURE_MAX[units.pressure] ?? TIRE_PRESSURE_MAX.bar,
+              },
+            ),
+          )
+        : []),
+      ...(tireWarning
+        ? [
+            feature(
+              VEHICLE_FEATURES.TIRE_PRESSURE_LOW,
+              'tirePressureLow',
+              CATEGORIES.INPUT,
+              TYPES.INPUT.BINARY,
+            ),
+          ]
+        : []),
     ],
   };
 }
@@ -453,6 +560,11 @@ export function vehicleStates(snapshot, unitOf) {
       round(distanceIn(unitOf(VEHICLE_FEATURES.ODOMETER), snapshot.odometerMiles)),
     ],
     [VEHICLE_FEATURES.AWAKE, binary(snapshot.online)],
+    ...TIRES.map(({ key, field }) => {
+      const unit = unitOf(key);
+      return [key, round(pressureIn(unit, snapshot[field]), PRESSURE_DECIMALS[unit] ?? 2)];
+    }),
+    [VEHICLE_FEATURES.TIRE_PRESSURE_LOW, binary(snapshot.tirePressureLow)],
   ];
   return states.filter(([, value]) => value !== null).map(([key, value]) => ({ key, value }));
 }

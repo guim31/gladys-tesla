@@ -44,7 +44,7 @@ src/widgets.js                    dashboard widgets (manifest `widgets`)
 src/config.js, src/units.js       DEFAULT_CONFIG + normalization, unit choice
 src/i18n.js                       texts that leave the container (en, fr, de, es)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (mandatory)
 test/                             node --test; test/helpers/fake*.js stand in for the SDK and Teslemetry
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
@@ -77,8 +77,9 @@ test/                             node --test; test/helpers/fake*.js stand in fo
   together.
 - **User-facing text** comes in four languages (English, French, German,
   Spanish): action messages, manifest texts, widgets, connection messages;
-  `test/i18n.test.js` checks it. The documentation exists in English and
-  French (`docs/en.md` / `docs/fr.md`), kept in sync.
+  `test/i18n.test.js` checks it. The documentation exists in the same four
+  languages (`docs/en.md`, `fr`, `de`, `es`), kept in sync: same sections,
+  checked by `test/i18n.test.js`.
 - **Logs.** The info level only tells the lifecycle: startup, the stream lost
   and back, errors useful to the user, one line per user command. Readings,
   states, credits and triggers go to debug (`LOG_LEVEL=debug`). A repeated

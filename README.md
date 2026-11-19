@@ -30,7 +30,7 @@ Model Y, Model S, Model X and Cybertruck are trademarks of Tesla, Inc.
 range, charging state and power, charge limit and charging current
 (adjustable), start / stop charging, plugged in, climate on / off and set
 temperature, inside and outside temperatures, lock / unlock, Sentry Mode,
-odometer, online or asleep. Distances and temperatures in miles and °F or in
+odometer, tire pressures and low pressure alert, online or asleep. Distances and temperatures in miles and °F or in
 km and °C, following the car's display by default. The car's location is never
 read.
 
@@ -48,7 +48,8 @@ unplugged, grid outage / restored. **Scene action**: set the Powerwall backup
 reserve.
 
 The user documentation, with the full feature list, the setup and the costs, is
-in [`docs/en.md`](docs/en.md) ([`docs/fr.md`](docs/fr.md) in French); Gladys
+in [`docs/en.md`](docs/en.md) (also in [French](docs/fr.md),
+[German](docs/de.md) and [Spanish](docs/es.md)); Gladys
 links to it from the integration's Configuration screen.
 
 ## Prerequisites
