@@ -23,6 +23,7 @@ import {
   STREAMING_FIELDS,
   VEHICLE_FEATURES,
   buildVehicleDevice,
+  hasTirePressures,
   isPlugged,
   snapshotFromStreamData,
   snapshotFromVehicleData,
@@ -75,7 +76,15 @@ const SITE_WIDGET_FIELDS = [
   'stormModeActive',
 ];
 // Snapshot fields the device structure depends on.
-const VEHICLE_STRUCTURE_FIELDS = ['distanceUnit', 'temperatureUnit'];
+// Snapshot fields that change the device structure: units, and whether the
+// car reports tyre pressures and TPMS warnings (features only added then).
+const VEHICLE_STRUCTURE_FIELDS = [
+  'distanceUnit',
+  'temperatureUnit',
+  'pressureUnit',
+  'hasTires',
+  'hasTireWarning',
+];
 
 export const STATUS_MESSAGES = {
   noToken: {
@@ -173,9 +182,17 @@ export function createTesla({
   }
 
   function vehicleDevice(vehicle) {
+    // Tyre features once the car reported them, or already created in Gladys
+    // (a car asleep with no cache must not make them vanish from Discovery).
+    const created = createdDevice(vehicleIds(gladys, vehicle.product.vin).device);
+    const createdHas = (key) =>
+      Boolean(created?.features?.some((f) => f.external_id === `${created.external_id}:${key}`));
     return buildVehicleDevice(gladys, vehicle.product, {
       language: config.language,
       units: vehicleUnits(config.units, vehicle.snapshot),
+      tires: vehicle.snapshot.hasTires || createdHas(VEHICLE_FEATURES.TIRE_PRESSURE_FRONT_LEFT),
+      tireWarning:
+        vehicle.snapshot.hasTireWarning || createdHas(VEHICLE_FEATURES.TIRE_PRESSURE_LOW),
     });
   }
 
@@ -367,6 +384,9 @@ export function createTesla({
   async function applyVehicle(vehicle, changes) {
     const previous = vehicle.snapshot;
     const next = { ...previous, ...changes };
+    // Sticky: once reported, the tyre features stay in the device structure.
+    next.hasTires = Boolean(previous.hasTires || hasTirePressures(next));
+    next.hasTireWarning = Boolean(previous.hasTireWarning || next.tirePressureLow !== undefined);
     vehicle.snapshot = next;
     const changed = (fields) => fields.some((f) => previous[f] !== next[f]);
     const deviceExternalId = vehicleIds(gladys, vehicle.product.vin).device;

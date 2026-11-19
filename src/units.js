@@ -12,6 +12,7 @@ import { DEVICE_FEATURE_UNITS } from '@gladysassistant/integration-sdk';
 import { UNIT_SYSTEMS } from './config.js';
 
 const KM_PER_MILE = 1.609344;
+const PSI_PER_BAR = 14.5037738;
 
 export const milesToKm = (miles) => miles * KM_PER_MILE;
 export const celsiusToFahrenheit = (c) => (c * 9) / 5 + 32;
@@ -27,14 +28,23 @@ export function round(value, decimals = 0) {
 /**
  * Units a vehicle is published in.
  * @param {string} system 'auto' | 'metric' | 'imperial'
- * @param {{ distanceUnit?: string, temperatureUnit?: string }} snapshot car display settings
+ * @param {{ distanceUnit?: string, temperatureUnit?: string, pressureUnit?: string }} snapshot
+ *   car display settings
  */
 export function vehicleUnits(system, snapshot = {}) {
   if (system === UNIT_SYSTEMS.IMPERIAL) {
-    return { distance: DEVICE_FEATURE_UNITS.MILE, temperature: DEVICE_FEATURE_UNITS.FAHRENHEIT };
+    return {
+      distance: DEVICE_FEATURE_UNITS.MILE,
+      temperature: DEVICE_FEATURE_UNITS.FAHRENHEIT,
+      pressure: DEVICE_FEATURE_UNITS.PSI,
+    };
   }
   if (system === UNIT_SYSTEMS.METRIC) {
-    return { distance: DEVICE_FEATURE_UNITS.KM, temperature: DEVICE_FEATURE_UNITS.CELSIUS };
+    return {
+      distance: DEVICE_FEATURE_UNITS.KM,
+      temperature: DEVICE_FEATURE_UNITS.CELSIUS,
+      pressure: DEVICE_FEATURE_UNITS.BAR,
+    };
   }
   // auto: the car's settings, metric until they are known. Distance and
   // temperature are independent (a UK car shows miles and °C).
@@ -44,6 +54,12 @@ export function vehicleUnits(system, snapshot = {}) {
       snapshot.temperatureUnit === 'F'
         ? DEVICE_FEATURE_UNITS.FAHRENHEIT
         : DEVICE_FEATURE_UNITS.CELSIUS,
+    pressure:
+      snapshot.pressureUnit === 'psi'
+        ? DEVICE_FEATURE_UNITS.PSI
+        : snapshot.pressureUnit === 'kPa'
+          ? DEVICE_FEATURE_UNITS.KILO_PASCAL
+          : DEVICE_FEATURE_UNITS.BAR,
   };
 }
 
@@ -62,4 +78,12 @@ export function temperatureIn(unit, celsius) {
 /** A temperature typed by the user in the published unit, back to °C. */
 export function temperatureToCelsius(unit, value) {
   return unit === DEVICE_FEATURE_UNITS.FAHRENHEIT ? fahrenheitToCelsius(value) : value;
+}
+
+/** A tyre pressure read in bar, in the published unit. */
+export function pressureIn(unit, bar) {
+  if (bar === null || bar === undefined) return null;
+  if (unit === DEVICE_FEATURE_UNITS.PSI) return bar * PSI_PER_BAR;
+  if (unit === DEVICE_FEATURE_UNITS.KILO_PASCAL) return bar * 100;
+  return bar;
 }

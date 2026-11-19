@@ -744,3 +744,18 @@ test('a different error on an already failing read is logged again', async () =>
   );
   await tesla.stop();
 });
+
+test('tyre pressures: discovered when the car reports them, published in the car unit', async () => {
+  const { gladys, tesla } = await setup();
+  const model3 = vehicleId(VINS.MODEL_3);
+  const device = gladys.discovered.find((d) => d.external_id === model3);
+  const tires = device.features.filter((f) => f.type === 'tire-pressure');
+  assert.equal(tires.length, 4);
+  assert.equal(tires[0].unit, 'psi', 'auto: the car displays psi');
+  assert.ok(device.features.some((f) => f.external_id === `${model3}:tire-pressure-low`));
+  assert.equal(gladys.last(`${model3}:tire-pressure-front-right`), 40.6); // 2.8 bar
+  assert.equal(gladys.last(`${model3}:tire-pressure-low`), 0);
+  await tesla.handleStreamEvent({ vin: VINS.MODEL_3, data: { TpmsPressureFr: 2.5 } });
+  assert.equal(gladys.last(`${model3}:tire-pressure-front-right`), 36.3);
+  await tesla.stop();
+});

@@ -41,12 +41,21 @@ test('auto units follow the car display, distance and temperature apart', () => 
   assert.deepEqual(vehicleUnits('auto', { distanceUnit: 'mi', temperatureUnit: 'C' }), {
     distance: 'mile',
     temperature: 'celsius',
+    pressure: 'bar',
   });
-  assert.deepEqual(vehicleUnits('auto', {}), { distance: 'km', temperature: 'celsius' });
+  assert.deepEqual(vehicleUnits('auto', {}), {
+    distance: 'km',
+    temperature: 'celsius',
+    pressure: 'bar',
+  });
+  assert.equal(vehicleUnits('auto', { pressureUnit: 'psi' }).pressure, 'psi');
+  assert.equal(vehicleUnits('auto', { pressureUnit: 'kPa' }).pressure, 'kPa');
   assert.deepEqual(vehicleUnits('imperial', { distanceUnit: 'km' }), {
     distance: 'mile',
     temperature: 'fahrenheit',
+    pressure: 'psi',
   });
+  assert.equal(vehicleUnits('metric', { pressureUnit: 'psi' }).pressure, 'bar');
 });
 
 test('the store survives a restart and ignores a corrupt file', async () => {

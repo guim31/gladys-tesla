@@ -110,6 +110,15 @@ publiée dans ses anciennes unités, rien ne se mélange.
 | Mode Sentinelle                      | **Marche / arrêt**                                                                       |
 | Kilométrage                          | km ou miles                                                                              |
 | En ligne (réveillée)                 | Allumé quand la voiture est éveillée, éteint quand elle dort ou n'a pas de réseau        |
+| Pression des pneus (×4)              | Avant gauche / droit, arrière gauche / droit : bar, psi ou kPa (comme dans la voiture)   |
+| Pression des pneus basse             | Allumé quand la voiture signale un pneu sous-gonflé ou à plat                            |
+
+Les quatre pressions et l'alerte de pression basse n'apparaissent que si la
+voiture les renvoie. Voiture déjà ajoutée ? Cliquez sur **Mettre à jour** dans
+l'onglet Découverte pour les ajouter. Pour être prévenu, créez une scène
+déclenchée par **Pression des pneus basse**, ou par une pression sous votre
+seuil (la pression baisse par temps froid : gardez de la marge). La voiture
+mesure ses pressions en roulant : à l'arrêt, c'est la dernière mesure.
 
 Cette version de l'intégration **ne lit jamais** la position de la voiture.
 

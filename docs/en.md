@@ -103,6 +103,15 @@ former units, so nothing gets mixed up.
 | Sentry Mode                  | **On / off**                                                                       |
 | Odometer                     | Miles or km                                                                        |
 | Online (awake)               | On when the car is awake, off while it sleeps or is out of coverage                |
+| Tire pressure (×4)           | Front left / right, rear left / right: bar, psi or kPa (as the car shows it)       |
+| Low tire pressure            | On when the car warns of an under-inflated or flat tire                            |
+
+The four tire pressures and the low pressure alert only appear when the car
+reports them. Already added your car? Click **Update** on it in the Discovery
+tab to add them. To be warned, create a scene triggered by **Low tire
+pressure**, or by a pressure below your threshold (a pressure reads low on a
+cold morning: leave some margin). The car measures its pressures while
+driving: a parked car shows its last reading.
 
 The car's location is **never read** by this version of the integration.
 

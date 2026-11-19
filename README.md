@@ -30,7 +30,7 @@ Model Y, Model S, Model X and Cybertruck are trademarks of Tesla, Inc.
 range, charging state and power, charge limit and charging current
 (adjustable), start / stop charging, plugged in, climate on / off and set
 temperature, inside and outside temperatures, lock / unlock, Sentry Mode,
-odometer, online or asleep. Distances and temperatures in miles and °F or in
+odometer, tire pressures and low pressure alert, online or asleep. Distances and temperatures in miles and °F or in
 km and °C, following the car's display by default. The car's location is never
 read.
 
