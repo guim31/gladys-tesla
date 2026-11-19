@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-19
+
 ### Added
 
 - Tire pressures of the car, front left, front right, rear left and rear
@@ -106,7 +108,8 @@ the notes of the version's GitHub Release.
 - A _Test the connection_ action, showing the vehicles, energy sites, stream
   status and Teslemetry credit balance.
 
-[Unreleased]: https://github.com/guim31/gladys-tesla/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/guim31/gladys-tesla/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/guim31/gladys-tesla/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/guim31/gladys-tesla/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/guim31/gladys-tesla/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/guim31/gladys-tesla/compare/v1.2.0...v1.3.0
